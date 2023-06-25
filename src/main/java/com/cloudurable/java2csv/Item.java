@@ -54,7 +54,6 @@ public class Item {
     @Override
     public String toString() {
         return "Item{" +
-
                 "simpleName='" + simpleName + '\'' +
                 ", type=" + type +
                 ", name='" + name + '\'' +
