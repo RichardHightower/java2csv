@@ -2,6 +2,7 @@ package com.cloudurable.java2csv;
 
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.PackageDeclaration;
 import com.github.javaparser.ast.body.*;
 import com.github.javaparser.ast.nodeTypes.NodeWithName;
@@ -11,7 +12,10 @@ import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 
 /**
@@ -95,57 +99,87 @@ public class Java2CSV {
 
         private final CompilationUnit compilationUnit;
 
+        private final List<Item> items;
+
         public ClassVisitor(CompilationUnit compilationUnit) {
             this.compilationUnit = compilationUnit;
+            this.items = new ArrayList<>();
         }
 
         @Override
         public void visit(ClassOrInterfaceDeclaration cls, Void arg) {
-
-            visitClass(compilationUnit.getPackageDeclaration().get().getNameAsString(), cls);
+            visitClass(compilationUnit.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse(""),
+                    compilationUnit.getImports().stream().map(Node::toString).collect(Collectors.joining("\n")),
+                    cls);
             super.visit(cls, arg);
         }
 
-        public void visitClass(String packageName, ClassOrInterfaceDeclaration cls) {
+        public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) {
 
 
-            String type = cls.isInterface() ? "interface" : "class";
-            System.out.printf("%s: %s \n %s \n %s \n",
-                    type,
-                    packageName + "." + cls.getNameAsString(),
-                    getSmallDefinition(cls.toString()),
-                    cls.getJavadoc(),
-                    getBodyDefinition(cls, 200, "")
-                    );
-            cls.getMethods().forEach(method -> visitMethod(cls, method));
-            cls.getFields().forEach(field -> visitField(cls, field));
+            Item item = Item.builder().importBody(importBody)
+                    .type(cls.isInterface() ? JavaItemType.INTERFACE : JavaItemType.CLASS)
+                    .name(packageName + "." + cls.getNameAsString())
+                    .simpleName(cls.getNameAsString())
+                    .definition(getSmallDefinition(cls.toString()))
+                    .javadoc(cls.getJavadoc().map(Object::toString).orElse(""))
+                    .body(getBodyDefinition(cls, 200, "")).build();
+            items.add(item);
+            System.out.println(item);
+            cls.getMethods().forEach(method -> visitMethod(item, method));
+            cls.getFields().forEach(field -> visitField(item, field));
 
         }
 
 
-        private void visitField(ClassOrInterfaceDeclaration cls, FieldDeclaration field) {
-            System.out.printf("Field: %s \n %s \n %s \n",
-                    cls.getNameAsString() + "." + fieldName(field),
-                    field,
-                    field.getJavadoc()
-            );
+        private void visitField(Item parent, FieldDeclaration field) {
+
+            Item item = Item.builder().type(JavaItemType.FIELD)
+                    .name(parent.getName() + "." + fieldName(field))
+                    .simpleName(fieldName(field))
+                    .definition(field.toString())
+                    .javadoc(field.getJavadoc().map(Object::toString).orElse(""))
+                    .build();
+            items.add(item);
+            System.out.println(item);
         }
 
 
-        public void visitMethod(final ClassOrInterfaceDeclaration cls, final MethodDeclaration method) {
-            System.out.printf("Method: %s \n %s \n %s \n %s \n",
-                    cls.getNameAsString() + "." + method.getName(),
-                    getSmallDefinition(method.toString()),
-                    method.getJavadoc(),
-                    getBodyDefinition(method, 500, "")
-            );
+        public void visitMethod(Item parent, final MethodDeclaration method) {
+
+            Item item = Item.builder().type(JavaItemType.METHOD)
+                    .name(parent.getName() + "." + method.getName())
+                    .simpleName(method.getName().toString())
+                    .definition(method.toString())
+                    .javadoc(method.getJavadoc().map(Object::toString).orElse("")).build();
+            items.add(item);
+            System.out.println(item);
         }
 
         @Override
         public void visit(EnumDeclaration n, Void arg) {
-            System.out.println("Enum: " + n.getName());
-            n.getMethods().forEach(method -> System.out.println("    Method: " + method.getName()));
+            visitEnum(compilationUnit.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse(""),
+                    compilationUnit.getImports().stream().map(Node::toString).collect(Collectors.joining("\n")),
+                    n);
             super.visit(n, arg);
+
+
+        }
+
+        private void visitEnum(String packageName, String importBody, EnumDeclaration enumD) {
+
+            Item item = Item.builder().importBody(importBody)
+                    .type(JavaItemType.ENUM)
+                    .name(packageName + "." + enumD.getNameAsString())
+                    .simpleName(enumD.getNameAsString())
+                    .definition(getSmallDefinition(enumD.toString()))
+                    .javadoc(enumD.getJavadoc().map(Object::toString).orElse(""))
+                    .body(getBodyDefinition(enumD, 200, "")).build();
+            items.add(item);
+            System.out.println(item);
+            enumD.getMethods().forEach(method -> visitMethod(item, method));
+            enumD.getFields().forEach(field -> visitField(item, field));
+
         }
     }
 }
