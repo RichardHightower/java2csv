@@ -1,5 +1,7 @@
 package com.cloudurable.java2csv;
 
+import java.util.List;
+
 public class Item {
     private final String importBody;
     private final String body;
@@ -13,14 +15,26 @@ public class Item {
     private final JavaItemType type;
 
     public Item(String importBody, String body, String javadoc, String name, String simpleName, String definition, Item parent, JavaItemType type) {
-        this.importBody = importBody;
-        this.body = body;
-        this.javadoc = javadoc;
-        this.name = name;
-        this.simpleName = simpleName;
-        this.definition = definition;
-        this.parent = parent;
+        this.importBody = orEmptyString(importBody);
+        this.body = orEmptyString(body);
+        this.javadoc = orEmptyString(javadoc);
+        this.name = orEmptyString(name);
+        this.simpleName = orEmptyString(simpleName);
+        this.definition = orEmptyString(definition);
+        this.parent =parent;
         this.type = type;
+    }
+
+    private String orEmptyString(String part) {
+        return part == null ? "" : part;
+    }
+
+    public static List<String> headers() {
+        return List.of("Name", "Type", "FullName", "Definition", "JavaDoc", "Parent", "Imports", "Body");
+    }
+
+    public  List<String> row() {
+        return List.of(simpleName, type.toString().toLowerCase(), name, definition,  javadoc, parent!=null ? parent.getName() : "", importBody, body);
     }
 
     public String getImportBody() {
