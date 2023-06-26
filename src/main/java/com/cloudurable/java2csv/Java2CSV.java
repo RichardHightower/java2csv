@@ -14,18 +14,20 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 /**
  * Parse Java files and turn them into CSV files.
  */
 public class Java2CSV {
-
-    public final static String MY_FIELD = "BOO";
 
 
     /**
@@ -50,11 +52,11 @@ public class Java2CSV {
 
     }
 
-    private static String getBodyDefinition(Object n, int numLinesMax, String alternativeString) {
+    private static String getBodyDefinition(Object n, int numLinesMax) {
 
         String[] lines = n.toString().split("\n");
         if (lines.length > numLinesMax) {
-            return alternativeString;
+            return "";
         } else {
             return n.toString();
         }
@@ -64,22 +66,19 @@ public class Java2CSV {
     public static void main(String[] args) throws IOException {
         System.out.println(new File(".").getCanonicalFile());
         try {
-            String directoryPath = args.length > 0 ? args[0] : ".";
-
-            String output = args.length > 1 ? args[1] : "output.csv";
+            final String directoryPath = args.length > 0 ? args[0] : ".";
+            final String outputFile = args.length > 1 ? args[1] : "output.csv";
 
             File dir = new File(directoryPath).getCanonicalFile();
             if (dir.exists() && dir.isDirectory()) {
                 List<Item> items = scanDirectory(dir);
                 List<List<String>> lines = items.stream().map(Item::row).collect(Collectors.toList());
-                try (CSVWriter writer = new CSVWriter(new FileWriter(output))) {
+                try (CSVWriter writer = new CSVWriter(new FileWriter(outputFile))) {
                     writer.writeNext(Item.headers().toArray(new String[0]));
                     for (List<String> line : lines) {
                         writer.writeNext(line.toArray(new String[0]));
                     }
                 }
-
-
             } else {
                 System.out.printf("Directory does not exist %s or is not a directory", dir);
             }
@@ -91,13 +90,22 @@ public class Java2CSV {
 
     private static List<Item> scanDirectory(File directoryPath) throws IOException {
         List<Item> items = new ArrayList<>(32);
-        Files.walk(directoryPath.toPath())
-                .filter(Files::isRegularFile)
-                .filter(p -> p.toString().endsWith(".java"))
-                .forEach(p -> parseFile(p.toFile(), items));
+
+        try (Stream<Path> walk = Files.walk(directoryPath.toPath())) {
+            walk.filter(Files::isRegularFile)
+                    .filter(p -> p.toString().endsWith(".java"))
+                    .forEach(p -> parseFile(p.toFile(), items));
+
+        } catch (IOException e) {
+
+            // Handle the IOException if an error occurs while scanning the directory
+            System.err.println("An error occurred while scanning the directory: " + e.getMessage());
+            throw e;
+        }
 
         return items;
     }
+
 
     private static void parseFile(File file, List<Item> items) {
         System.out.println(file);
@@ -113,18 +121,36 @@ public class Java2CSV {
     private static class ClassVisitor extends VoidVisitorAdapter<Void> {
 
 
+        static Pattern JAVA_DOC_REGEX = Pattern.compile("^/\\*\\*.*?\\*/\\s*", Pattern.DOTALL);
         private final CompilationUnit compilationUnit;
         private final List<Item> items;
-
 
         public ClassVisitor(CompilationUnit compilationUnit, List<Item> items) {
             this.compilationUnit = compilationUnit;
             this.items = items;
         }
 
+        public static String[] extractJavaDoc(String code) {
+            // Define the regular expression pattern to match Javadoc comments
+
+            Matcher matcher = JAVA_DOC_REGEX.matcher(code);
+
+
+            if (matcher.find()) {
+                // Extract the Javadoc comment
+                String javadoc = matcher.group();
+
+                // Extract the method code
+                String methodCode = code.substring(matcher.end());
+
+                return new String[]{javadoc, methodCode};
+            } else {
+                return new String[]{"", code}; // No Javadoc found
+            }
+        }
+
         @Override
         public void visit(ClassOrInterfaceDeclaration cls, Void arg) {
-
 
 
             if (!cls.isInnerClass()) {
@@ -137,37 +163,44 @@ public class Java2CSV {
         }
 
         public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) {
-
+            String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
+            final String javaDoc = parts[0];
+            final String code = parts[1];
 
             Item item = Item.builder().importBody(importBody)
                     .type(cls.isInterface() ? JavaItemType.INTERFACE : JavaItemType.CLASS)
                     .name(packageName + "." + cls.getNameAsString())
                     .simpleName(cls.getNameAsString())
-                    .definition(getSmallDefinition(cls.toString()))
-                    .javadoc(cls.getJavadoc().map(Object::toString).orElse(""))
-                    .body(getBodyDefinition(cls, 200, "")).build();
+                    .definition(getSmallDefinition(code))
+                    .javadoc(javaDoc)
+                    .body(code).build();
             items.add(item);
             System.out.println(item);
-            cls.getImplementedTypes().stream().filter(typ -> typ.isClassOrInterfaceType())
-                    .forEach(clsInner -> visitClassType(packageName, importBody, item, clsInner.asClassOrInterfaceType()));
+            cls.getImplementedTypes().stream().filter(ClassOrInterfaceType::isClassOrInterfaceType)
+                    .forEach(clsInner -> visitClassType(packageName, importBody, item,
+                            clsInner.asClassOrInterfaceType()));
             cls.getMethods().forEach(method -> visitMethod(item, method));
             cls.getFields().forEach(field -> visitField(item, field));
 
         }
 
         private void visitClassType(String packageName, String importBody, Item parent, ClassOrInterfaceType cls) {
+            final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
+            final String javaDoc = parts[0];
+            final String code = parts[1];
+
             Item item = Item.builder().importBody(importBody)
                     .type(JavaItemType.CLASS)
                     .name(parent.getName() + "." + cls.getNameAsString())
                     .simpleName(cls.getNameAsString())
-                    .definition(getSmallDefinition(cls.toString()))
-                    .javadoc("")
+                    .definition(getSmallDefinition(code))
+                    .javadoc(javaDoc)
                     .parent(parent)
-                    .body(getBodyDefinition(cls, 200, "")).build();
+                    .body(code)
+                    .build();
             items.add(item);
             System.out.println(item);
         }
-
 
         private void visitField(Item parent, FieldDeclaration field) {
 
@@ -182,16 +215,19 @@ public class Java2CSV {
             System.out.println(item);
         }
 
-
         public void visitMethod(Item parent, final MethodDeclaration method) {
 
+            String[] parts = extractJavaDoc(getBodyDefinition(method, 500));
+            final String javaDoc = parts[0];
+            final String code = parts[1];
 
             Item item = Item.builder().type(JavaItemType.METHOD)
                     .name(parent.getName() + "." + method.getName())
                     .simpleName(method.getName().toString())
-                    .definition(method.toString())
-                    .javadoc(method.getJavadoc().map(Object::toString).orElse(""))
+                    .definition(getSmallDefinition(code))
+                    .javadoc(javaDoc)
                     .parent(parent)
+                    .body(code)
                     .build();
             items.add(item);
             System.out.println(item);
@@ -209,13 +245,18 @@ public class Java2CSV {
 
         private void visitEnum(String packageName, String importBody, EnumDeclaration enumD) {
 
+            String[] parts = extractJavaDoc(getBodyDefinition(enumD, 200));
+            final String javaDoc = parts[0];
+            final String code = parts[1];
+
+
             Item item = Item.builder().importBody(importBody)
                     .type(JavaItemType.ENUM)
                     .name(packageName + "." + enumD.getNameAsString())
                     .simpleName(enumD.getNameAsString())
-                    .definition(getSmallDefinition(enumD.toString()))
-                    .javadoc(enumD.getJavadoc().map(Object::toString).orElse(""))
-                    .body(getBodyDefinition(enumD, 200, "")).build();
+                    .definition(getSmallDefinition(code))
+                    .javadoc(javaDoc)
+                    .body(code).build();
             items.add(item);
             System.out.println(item);
             enumD.getMethods().forEach(method -> visitMethod(item, method));

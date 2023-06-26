@@ -21,20 +21,24 @@ public class Item {
         this.name = orEmptyString(name);
         this.simpleName = orEmptyString(simpleName);
         this.definition = orEmptyString(definition);
-        this.parent =parent;
+        this.parent = parent;
         this.type = type;
-    }
-
-    private String orEmptyString(String part) {
-        return part == null ? "" : part;
     }
 
     public static List<String> headers() {
         return List.of("Name", "Type", "FullName", "Definition", "JavaDoc", "Parent", "Imports", "Body");
     }
 
-    public  List<String> row() {
-        return List.of(simpleName, type.toString().toLowerCase(), name, definition,  javadoc, parent!=null ? parent.getName() : "", importBody, body);
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    private String orEmptyString(String part) {
+        return part == null ? "" : part;
+    }
+
+    public List<String> row() {
+        return List.of(simpleName, type.toString().toLowerCase(), name, definition, javadoc, parent != null ? parent.getName() : "", importBody, body);
     }
 
     public String getImportBody() {
@@ -79,29 +83,23 @@ public class Item {
                 '}';
     }
 
-    public static Builder builder() {
-        return new Builder();
-    }
-
     public static class Builder {
-        private Builder () {
-        }
         private String body;
         private String javadoc;
         private String name;
         private String definition;
         private Item parent;
-        private  String importBody;
+        private String importBody;
+        private String simpleName;
+        private JavaItemType type;
 
-
-        private  String simpleName;
+        private Builder() {
+        }
 
         public Builder simpleName(String simpleName) {
             this.simpleName = simpleName;
             return this;
         }
-
-        private JavaItemType type;
 
         public Builder type(JavaItemType type) {
             this.type = type;

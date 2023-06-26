@@ -1,8 +1,8 @@
 "Name","Type","FullName","Definition","JavaDoc","Parent","Imports","Body"
-"Java2CSV","class","com.cloudurable.java2csv.Java2CSV","/**
+"Java2CSV","class","com.cloudurable.java2csv.Java2CSV","public class Java2CSV { /* the rest ... */ }","/**
  * Parse Java files and turn them into CSV files.
  */
-public class Java2CSV { /* the rest ... */ }","Javadoc{description=JavadocDescription{elements=[JavadocSnippet{text='Parse Java files and turn them into CSV files.'}]}, blockTags=[]}","","import com.github.javaparser.StaticJavaParser;
+","","import com.github.javaparser.StaticJavaParser;
 
 import com.github.javaparser.ast.CompilationUnit;
 
@@ -28,19 +28,22 @@ import java.io.IOException;
 
 import java.nio.file.Files;
 
+import java.nio.file.Path;
+
 import java.util.ArrayList;
 
 import java.util.List;
 
 import java.util.Optional;
 
-import java.util.stream.Collectors;
-","/**
- * Parse Java files and turn them into CSV files.
- */
-public class Java2CSV {
+import java.util.regex.Matcher;
 
-    public final static String MY_FIELD = ""BOO"";
+import java.util.regex.Pattern;
+
+import java.util.stream.Collectors;
+
+import java.util.stream.Stream;
+","public class Java2CSV {
 
     /**
      * Extract field name from FieldDeclaration.
@@ -58,10 +61,10 @@ public class Java2CSV {
         return lines[0] + ""{ /* the rest ... */ }"";
     }
 
-    private static String getBodyDefinition(Object n, int numLinesMax, String alternativeString) {
+    private static String getBodyDefinition(Object n, int numLinesMax) {
         String[] lines = n.toString().split(""\n"");
         if (lines.length > numLinesMax) {
-            return alternativeString;
+            return """";
         } else {
             return n.toString();
         }
@@ -70,13 +73,13 @@ public class Java2CSV {
     public static void main(String[] args) throws IOException {
         System.out.println(new File(""."").getCanonicalFile());
         try {
-            String directoryPath = args.length > 0 ? args[0] : ""."";
-            String output = args.length > 1 ? args[1] : ""output.csv"";
+            final String directoryPath = args.length > 0 ? args[0] : ""."";
+            final String outputFile = args.length > 1 ? args[1] : ""output.csv"";
             File dir = new File(directoryPath).getCanonicalFile();
             if (dir.exists() && dir.isDirectory()) {
                 List<Item> items = scanDirectory(dir);
                 List<List<String>> lines = items.stream().map(Item::row).collect(Collectors.toList());
-                try (CSVWriter writer = new CSVWriter(new FileWriter(output))) {
+                try (CSVWriter writer = new CSVWriter(new FileWriter(outputFile))) {
                     writer.writeNext(Item.headers().toArray(new String[0]));
                     for (List<String> line : lines) {
                         writer.writeNext(line.toArray(new String[0]));
@@ -92,7 +95,13 @@ public class Java2CSV {
 
     private static List<Item> scanDirectory(File directoryPath) throws IOException {
         List<Item> items = new ArrayList<>(32);
-        Files.walk(directoryPath.toPath()).filter(Files::isRegularFile).filter(p -> p.toString().endsWith("".java"")).forEach(p -> parseFile(p.toFile(), items));
+        try (Stream<Path> walk = Files.walk(directoryPath.toPath())) {
+            walk.filter(Files::isRegularFile).filter(p -> p.toString().endsWith("".java"")).forEach(p -> parseFile(p.toFile(), items));
+        } catch (IOException e) {
+            // Handle the IOException if an error occurs while scanning the directory
+            System.err.println(""An error occurred while scanning the directory: "" + e.getMessage());
+            throw e;
+        }
         return items;
     }
 
@@ -108,6 +117,8 @@ public class Java2CSV {
 
     private static class ClassVisitor extends VoidVisitorAdapter<Void> {
 
+        static Pattern JAVA_DOC_REGEX = Pattern.compile(""^/\\*\\*.*?\\*/\\s*"", Pattern.DOTALL);
+
         private final CompilationUnit compilationUnit;
 
         private final List<Item> items;
@@ -115,6 +126,21 @@ public class Java2CSV {
         public ClassVisitor(CompilationUnit compilationUnit, List<Item> items) {
             this.compilationUnit = compilationUnit;
             this.items = items;
+        }
+
+        public static String[] extractJavaDoc(String code) {
+            // Define the regular expression pattern to match Javadoc comments
+            Matcher matcher = JAVA_DOC_REGEX.matcher(code);
+            if (matcher.find()) {
+                // Extract the Javadoc comment
+                String javadoc = matcher.group();
+                // Extract the method code
+                String methodCode = code.substring(matcher.end());
+                return new String[] { javadoc, methodCode };
+            } else {
+                // No Javadoc found
+                return new String[] { """", code };
+            }
         }
 
         @Override
@@ -126,16 +152,22 @@ public class Java2CSV {
         }
 
         public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) {
-            Item item = Item.builder().importBody(importBody).type(cls.isInterface() ? JavaItemType.INTERFACE : JavaItemType.CLASS).name(packageName + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(cls.toString())).javadoc(cls.getJavadoc().map(Object::toString).orElse("""")).body(getBodyDefinition(cls, 200, """")).build();
+            String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
+            final String javaDoc = parts[0];
+            final String code = parts[1];
+            Item item = Item.builder().importBody(importBody).type(cls.isInterface() ? JavaItemType.INTERFACE : JavaItemType.CLASS).name(packageName + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
             items.add(item);
             System.out.println(item);
-            cls.getImplementedTypes().stream().filter(typ -> typ.isClassOrInterfaceType()).forEach(clsInner -> visitClassType(packageName, importBody, item, clsInner.asClassOrInterfaceType()));
+            cls.getImplementedTypes().stream().filter(ClassOrInterfaceType::isClassOrInterfaceType).forEach(clsInner -> visitClassType(packageName, importBody, item, clsInner.asClassOrInterfaceType()));
             cls.getMethods().forEach(method -> visitMethod(item, method));
             cls.getFields().forEach(field -> visitField(item, field));
         }
 
         private void visitClassType(String packageName, String importBody, Item parent, ClassOrInterfaceType cls) {
-            Item item = Item.builder().importBody(importBody).type(JavaItemType.CLASS).name(parent.getName() + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(cls.toString())).javadoc("""").parent(parent).body(getBodyDefinition(cls, 200, """")).build();
+            final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
+            final String javaDoc = parts[0];
+            final String code = parts[1];
+            Item item = Item.builder().importBody(importBody).type(JavaItemType.CLASS).name(parent.getName() + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).parent(parent).body(code).build();
             items.add(item);
             System.out.println(item);
         }
@@ -147,7 +179,10 @@ public class Java2CSV {
         }
 
         public void visitMethod(Item parent, final MethodDeclaration method) {
-            Item item = Item.builder().type(JavaItemType.METHOD).name(parent.getName() + ""."" + method.getName()).simpleName(method.getName().toString()).definition(method.toString()).javadoc(method.getJavadoc().map(Object::toString).orElse("""")).parent(parent).build();
+            String[] parts = extractJavaDoc(getBodyDefinition(method, 500));
+            final String javaDoc = parts[0];
+            final String code = parts[1];
+            Item item = Item.builder().type(JavaItemType.METHOD).name(parent.getName() + ""."" + method.getName()).simpleName(method.getName().toString()).definition(getSmallDefinition(code)).javadoc(javaDoc).parent(parent).body(code).build();
             items.add(item);
             System.out.println(item);
         }
@@ -159,7 +194,10 @@ public class Java2CSV {
         }
 
         private void visitEnum(String packageName, String importBody, EnumDeclaration enumD) {
-            Item item = Item.builder().importBody(importBody).type(JavaItemType.ENUM).name(packageName + ""."" + enumD.getNameAsString()).simpleName(enumD.getNameAsString()).definition(getSmallDefinition(enumD.toString())).javadoc(enumD.getJavadoc().map(Object::toString).orElse("""")).body(getBodyDefinition(enumD, 200, """")).build();
+            String[] parts = extractJavaDoc(getBodyDefinition(enumD, 200));
+            final String javaDoc = parts[0];
+            final String code = parts[1];
+            Item item = Item.builder().importBody(importBody).type(JavaItemType.ENUM).name(packageName + ""."" + enumD.getNameAsString()).simpleName(enumD.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
             items.add(item);
             System.out.println(item);
             enumD.getMethods().forEach(method -> visitMethod(item, method));
@@ -167,38 +205,38 @@ public class Java2CSV {
         }
     }
 }"
-"fieldName","method","com.cloudurable.java2csv.Java2CSV.fieldName","/**
+"fieldName","method","com.cloudurable.java2csv.Java2CSV.fieldName","private static String fieldName(FieldDeclaration field) { /* the rest ... */ }","/**
  * Extract field name from FieldDeclaration.
  *
  * @param field input field
  */
-private static String fieldName(FieldDeclaration field) {
+","com.cloudurable.java2csv.Java2CSV","","private static String fieldName(FieldDeclaration field) {
     final Optional<VariableDeclarator> variableDeclarator = field.getChildNodes().stream().filter(node -> node instanceof VariableDeclarator).map(n -> (VariableDeclarator) n).findFirst();
     return variableDeclarator.map(NodeWithSimpleName::getNameAsString).orElse(""NO_NAME"");
-}","Javadoc{description=JavadocDescription{elements=[JavadocSnippet{text='Extract field name from FieldDeclaration.'}]}, blockTags=[JavadocBlockTag{type=PARAM, content='JavadocDescription{elements=[JavadocSnippet{text='input field'}]}', name=Optional[field]}]}","com.cloudurable.java2csv.Java2CSV","",""
-"getSmallDefinition","method","com.cloudurable.java2csv.Java2CSV.getSmallDefinition","private static String getSmallDefinition(String text) {
+}"
+"getSmallDefinition","method","com.cloudurable.java2csv.Java2CSV.getSmallDefinition","private static String getSmallDefinition(String text) { /* the rest ... */ }","","com.cloudurable.java2csv.Java2CSV","","private static String getSmallDefinition(String text) {
     // Split the string into an array of lines
     String[] lines = text.split(""\\{"");
     return lines[0] + ""{ /* the rest ... */ }"";
-}","","com.cloudurable.java2csv.Java2CSV","",""
-"getBodyDefinition","method","com.cloudurable.java2csv.Java2CSV.getBodyDefinition","private static String getBodyDefinition(Object n, int numLinesMax, String alternativeString) {
+}"
+"getBodyDefinition","method","com.cloudurable.java2csv.Java2CSV.getBodyDefinition","private static String getBodyDefinition(Object n, int numLinesMax) { /* the rest ... */ }","","com.cloudurable.java2csv.Java2CSV","","private static String getBodyDefinition(Object n, int numLinesMax) {
     String[] lines = n.toString().split(""\n"");
     if (lines.length > numLinesMax) {
-        return alternativeString;
+        return """";
     } else {
         return n.toString();
     }
-}","","com.cloudurable.java2csv.Java2CSV","",""
-"main","method","com.cloudurable.java2csv.Java2CSV.main","public static void main(String[] args) throws IOException {
+}"
+"main","method","com.cloudurable.java2csv.Java2CSV.main","public static void main(String[] args) throws IOException { /* the rest ... */ }","","com.cloudurable.java2csv.Java2CSV","","public static void main(String[] args) throws IOException {
     System.out.println(new File(""."").getCanonicalFile());
     try {
-        String directoryPath = args.length > 0 ? args[0] : ""."";
-        String output = args.length > 1 ? args[1] : ""output.csv"";
+        final String directoryPath = args.length > 0 ? args[0] : ""."";
+        final String outputFile = args.length > 1 ? args[1] : ""output.csv"";
         File dir = new File(directoryPath).getCanonicalFile();
         if (dir.exists() && dir.isDirectory()) {
             List<Item> items = scanDirectory(dir);
             List<List<String>> lines = items.stream().map(Item::row).collect(Collectors.toList());
-            try (CSVWriter writer = new CSVWriter(new FileWriter(output))) {
+            try (CSVWriter writer = new CSVWriter(new FileWriter(outputFile))) {
                 writer.writeNext(Item.headers().toArray(new String[0]));
                 for (List<String> line : lines) {
                     writer.writeNext(line.toArray(new String[0]));
@@ -210,13 +248,19 @@ private static String fieldName(FieldDeclaration field) {
     } catch (Exception ex) {
         ex.printStackTrace();
     }
-}","","com.cloudurable.java2csv.Java2CSV","",""
-"scanDirectory","method","com.cloudurable.java2csv.Java2CSV.scanDirectory","private static List<Item> scanDirectory(File directoryPath) throws IOException {
+}"
+"scanDirectory","method","com.cloudurable.java2csv.Java2CSV.scanDirectory","private static List<Item> scanDirectory(File directoryPath) throws IOException { /* the rest ... */ }","","com.cloudurable.java2csv.Java2CSV","","private static List<Item> scanDirectory(File directoryPath) throws IOException {
     List<Item> items = new ArrayList<>(32);
-    Files.walk(directoryPath.toPath()).filter(Files::isRegularFile).filter(p -> p.toString().endsWith("".java"")).forEach(p -> parseFile(p.toFile(), items));
+    try (Stream<Path> walk = Files.walk(directoryPath.toPath())) {
+        walk.filter(Files::isRegularFile).filter(p -> p.toString().endsWith("".java"")).forEach(p -> parseFile(p.toFile(), items));
+    } catch (IOException e) {
+        // Handle the IOException if an error occurs while scanning the directory
+        System.err.println(""An error occurred while scanning the directory: "" + e.getMessage());
+        throw e;
+    }
     return items;
-}","","com.cloudurable.java2csv.Java2CSV","",""
-"parseFile","method","com.cloudurable.java2csv.Java2CSV.parseFile","private static void parseFile(File file, List<Item> items) {
+}"
+"parseFile","method","com.cloudurable.java2csv.Java2CSV.parseFile","private static void parseFile(File file, List<Item> items) { /* the rest ... */ }","","com.cloudurable.java2csv.Java2CSV","","private static void parseFile(File file, List<Item> items) {
     System.out.println(file);
     try {
         CompilationUnit compilationUnit = StaticJavaParser.parse(file);
@@ -224,8 +268,7 @@ private static String fieldName(FieldDeclaration field) {
     } catch (IOException e) {
         e.printStackTrace();
     }
-}","","com.cloudurable.java2csv.Java2CSV","",""
-"MY_FIELD","field","com.cloudurable.java2csv.Java2CSV.MY_FIELD","public final static String MY_FIELD = ""BOO"";","","com.cloudurable.java2csv.Java2CSV","",""
+}"
 "ClassVisitor","class","com.cloudurable.java2csv.ClassVisitor","private static class ClassVisitor extends VoidVisitorAdapter<Void> { /* the rest ... */ }","","","import com.github.javaparser.StaticJavaParser;
 
 import com.github.javaparser.ast.CompilationUnit;
@@ -252,14 +295,24 @@ import java.io.IOException;
 
 import java.nio.file.Files;
 
+import java.nio.file.Path;
+
 import java.util.ArrayList;
 
 import java.util.List;
 
 import java.util.Optional;
 
+import java.util.regex.Matcher;
+
+import java.util.regex.Pattern;
+
 import java.util.stream.Collectors;
+
+import java.util.stream.Stream;
 ","private static class ClassVisitor extends VoidVisitorAdapter<Void> {
+
+    static Pattern JAVA_DOC_REGEX = Pattern.compile(""^/\\*\\*.*?\\*/\\s*"", Pattern.DOTALL);
 
     private final CompilationUnit compilationUnit;
 
@@ -268,6 +321,21 @@ import java.util.stream.Collectors;
     public ClassVisitor(CompilationUnit compilationUnit, List<Item> items) {
         this.compilationUnit = compilationUnit;
         this.items = items;
+    }
+
+    public static String[] extractJavaDoc(String code) {
+        // Define the regular expression pattern to match Javadoc comments
+        Matcher matcher = JAVA_DOC_REGEX.matcher(code);
+        if (matcher.find()) {
+            // Extract the Javadoc comment
+            String javadoc = matcher.group();
+            // Extract the method code
+            String methodCode = code.substring(matcher.end());
+            return new String[] { javadoc, methodCode };
+        } else {
+            // No Javadoc found
+            return new String[] { """", code };
+        }
     }
 
     @Override
@@ -279,16 +347,22 @@ import java.util.stream.Collectors;
     }
 
     public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) {
-        Item item = Item.builder().importBody(importBody).type(cls.isInterface() ? JavaItemType.INTERFACE : JavaItemType.CLASS).name(packageName + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(cls.toString())).javadoc(cls.getJavadoc().map(Object::toString).orElse("""")).body(getBodyDefinition(cls, 200, """")).build();
+        String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
+        final String javaDoc = parts[0];
+        final String code = parts[1];
+        Item item = Item.builder().importBody(importBody).type(cls.isInterface() ? JavaItemType.INTERFACE : JavaItemType.CLASS).name(packageName + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
         items.add(item);
         System.out.println(item);
-        cls.getImplementedTypes().stream().filter(typ -> typ.isClassOrInterfaceType()).forEach(clsInner -> visitClassType(packageName, importBody, item, clsInner.asClassOrInterfaceType()));
+        cls.getImplementedTypes().stream().filter(ClassOrInterfaceType::isClassOrInterfaceType).forEach(clsInner -> visitClassType(packageName, importBody, item, clsInner.asClassOrInterfaceType()));
         cls.getMethods().forEach(method -> visitMethod(item, method));
         cls.getFields().forEach(field -> visitField(item, field));
     }
 
     private void visitClassType(String packageName, String importBody, Item parent, ClassOrInterfaceType cls) {
-        Item item = Item.builder().importBody(importBody).type(JavaItemType.CLASS).name(parent.getName() + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(cls.toString())).javadoc("""").parent(parent).body(getBodyDefinition(cls, 200, """")).build();
+        final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
+        final String javaDoc = parts[0];
+        final String code = parts[1];
+        Item item = Item.builder().importBody(importBody).type(JavaItemType.CLASS).name(parent.getName() + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).parent(parent).body(code).build();
         items.add(item);
         System.out.println(item);
     }
@@ -300,7 +374,10 @@ import java.util.stream.Collectors;
     }
 
     public void visitMethod(Item parent, final MethodDeclaration method) {
-        Item item = Item.builder().type(JavaItemType.METHOD).name(parent.getName() + ""."" + method.getName()).simpleName(method.getName().toString()).definition(method.toString()).javadoc(method.getJavadoc().map(Object::toString).orElse("""")).parent(parent).build();
+        String[] parts = extractJavaDoc(getBodyDefinition(method, 500));
+        final String javaDoc = parts[0];
+        final String code = parts[1];
+        Item item = Item.builder().type(JavaItemType.METHOD).name(parent.getName() + ""."" + method.getName()).simpleName(method.getName().toString()).definition(getSmallDefinition(code)).javadoc(javaDoc).parent(parent).body(code).build();
         items.add(item);
         System.out.println(item);
     }
@@ -312,55 +389,87 @@ import java.util.stream.Collectors;
     }
 
     private void visitEnum(String packageName, String importBody, EnumDeclaration enumD) {
-        Item item = Item.builder().importBody(importBody).type(JavaItemType.ENUM).name(packageName + ""."" + enumD.getNameAsString()).simpleName(enumD.getNameAsString()).definition(getSmallDefinition(enumD.toString())).javadoc(enumD.getJavadoc().map(Object::toString).orElse("""")).body(getBodyDefinition(enumD, 200, """")).build();
+        String[] parts = extractJavaDoc(getBodyDefinition(enumD, 200));
+        final String javaDoc = parts[0];
+        final String code = parts[1];
+        Item item = Item.builder().importBody(importBody).type(JavaItemType.ENUM).name(packageName + ""."" + enumD.getNameAsString()).simpleName(enumD.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
         items.add(item);
         System.out.println(item);
         enumD.getMethods().forEach(method -> visitMethod(item, method));
         enumD.getFields().forEach(field -> visitField(item, field));
     }
 }"
+"extractJavaDoc","method","com.cloudurable.java2csv.ClassVisitor.extractJavaDoc","public static String[] extractJavaDoc(String code) { /* the rest ... */ }","","com.cloudurable.java2csv.ClassVisitor","","public static String[] extractJavaDoc(String code) {
+    // Define the regular expression pattern to match Javadoc comments
+    Matcher matcher = JAVA_DOC_REGEX.matcher(code);
+    if (matcher.find()) {
+        // Extract the Javadoc comment
+        String javadoc = matcher.group();
+        // Extract the method code
+        String methodCode = code.substring(matcher.end());
+        return new String[] { javadoc, methodCode };
+    } else {
+        // No Javadoc found
+        return new String[] { """", code };
+    }
+}"
 "visit","method","com.cloudurable.java2csv.ClassVisitor.visit","@Override
+public void visit(ClassOrInterfaceDeclaration cls, Void arg) { /* the rest ... */ }","","com.cloudurable.java2csv.ClassVisitor","","@Override
 public void visit(ClassOrInterfaceDeclaration cls, Void arg) {
     if (!cls.isInnerClass()) {
         visitClass(compilationUnit.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse(""""), compilationUnit.getImports().stream().map(Node::toString).collect(Collectors.joining(""\n"")), cls);
     }
     super.visit(cls, arg);
-}","","com.cloudurable.java2csv.ClassVisitor","",""
-"visitClass","method","com.cloudurable.java2csv.ClassVisitor.visitClass","public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) {
-    Item item = Item.builder().importBody(importBody).type(cls.isInterface() ? JavaItemType.INTERFACE : JavaItemType.CLASS).name(packageName + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(cls.toString())).javadoc(cls.getJavadoc().map(Object::toString).orElse("""")).body(getBodyDefinition(cls, 200, """")).build();
+}"
+"visitClass","method","com.cloudurable.java2csv.ClassVisitor.visitClass","public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) { /* the rest ... */ }","","com.cloudurable.java2csv.ClassVisitor","","public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) {
+    String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
+    final String javaDoc = parts[0];
+    final String code = parts[1];
+    Item item = Item.builder().importBody(importBody).type(cls.isInterface() ? JavaItemType.INTERFACE : JavaItemType.CLASS).name(packageName + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
     items.add(item);
     System.out.println(item);
-    cls.getImplementedTypes().stream().filter(typ -> typ.isClassOrInterfaceType()).forEach(clsInner -> visitClassType(packageName, importBody, item, clsInner.asClassOrInterfaceType()));
+    cls.getImplementedTypes().stream().filter(ClassOrInterfaceType::isClassOrInterfaceType).forEach(clsInner -> visitClassType(packageName, importBody, item, clsInner.asClassOrInterfaceType()));
     cls.getMethods().forEach(method -> visitMethod(item, method));
     cls.getFields().forEach(field -> visitField(item, field));
-}","","com.cloudurable.java2csv.ClassVisitor","",""
-"visitClassType","method","com.cloudurable.java2csv.ClassVisitor.visitClassType","private void visitClassType(String packageName, String importBody, Item parent, ClassOrInterfaceType cls) {
-    Item item = Item.builder().importBody(importBody).type(JavaItemType.CLASS).name(parent.getName() + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(cls.toString())).javadoc("""").parent(parent).body(getBodyDefinition(cls, 200, """")).build();
+}"
+"visitClassType","method","com.cloudurable.java2csv.ClassVisitor.visitClassType","private void visitClassType(String packageName, String importBody, Item parent, ClassOrInterfaceType cls) { /* the rest ... */ }","","com.cloudurable.java2csv.ClassVisitor","","private void visitClassType(String packageName, String importBody, Item parent, ClassOrInterfaceType cls) {
+    final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
+    final String javaDoc = parts[0];
+    final String code = parts[1];
+    Item item = Item.builder().importBody(importBody).type(JavaItemType.CLASS).name(parent.getName() + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).parent(parent).body(code).build();
     items.add(item);
     System.out.println(item);
-}","","com.cloudurable.java2csv.ClassVisitor","",""
-"visitField","method","com.cloudurable.java2csv.ClassVisitor.visitField","private void visitField(Item parent, FieldDeclaration field) {
+}"
+"visitField","method","com.cloudurable.java2csv.ClassVisitor.visitField","private void visitField(Item parent, FieldDeclaration field) { /* the rest ... */ }","","com.cloudurable.java2csv.ClassVisitor","","private void visitField(Item parent, FieldDeclaration field) {
     Item item = Item.builder().type(JavaItemType.FIELD).name(parent.getName() + ""."" + fieldName(field)).simpleName(fieldName(field)).definition(field.toString()).javadoc(field.getJavadoc().map(Object::toString).orElse("""")).parent(parent).build();
     items.add(item);
     System.out.println(item);
-}","","com.cloudurable.java2csv.ClassVisitor","",""
-"visitMethod","method","com.cloudurable.java2csv.ClassVisitor.visitMethod","public void visitMethod(Item parent, final MethodDeclaration method) {
-    Item item = Item.builder().type(JavaItemType.METHOD).name(parent.getName() + ""."" + method.getName()).simpleName(method.getName().toString()).definition(method.toString()).javadoc(method.getJavadoc().map(Object::toString).orElse("""")).parent(parent).build();
+}"
+"visitMethod","method","com.cloudurable.java2csv.ClassVisitor.visitMethod","public void visitMethod(Item parent, final MethodDeclaration method) { /* the rest ... */ }","","com.cloudurable.java2csv.ClassVisitor","","public void visitMethod(Item parent, final MethodDeclaration method) {
+    String[] parts = extractJavaDoc(getBodyDefinition(method, 500));
+    final String javaDoc = parts[0];
+    final String code = parts[1];
+    Item item = Item.builder().type(JavaItemType.METHOD).name(parent.getName() + ""."" + method.getName()).simpleName(method.getName().toString()).definition(getSmallDefinition(code)).javadoc(javaDoc).parent(parent).body(code).build();
     items.add(item);
     System.out.println(item);
-}","","com.cloudurable.java2csv.ClassVisitor","",""
+}"
 "visit","method","com.cloudurable.java2csv.ClassVisitor.visit","@Override
+public void visit(EnumDeclaration n, Void arg) { /* the rest ... */ }","","com.cloudurable.java2csv.ClassVisitor","","@Override
 public void visit(EnumDeclaration n, Void arg) {
     visitEnum(compilationUnit.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse(""""), compilationUnit.getImports().stream().map(Node::toString).collect(Collectors.joining(""\n"")), n);
     super.visit(n, arg);
-}","","com.cloudurable.java2csv.ClassVisitor","",""
-"visitEnum","method","com.cloudurable.java2csv.ClassVisitor.visitEnum","private void visitEnum(String packageName, String importBody, EnumDeclaration enumD) {
-    Item item = Item.builder().importBody(importBody).type(JavaItemType.ENUM).name(packageName + ""."" + enumD.getNameAsString()).simpleName(enumD.getNameAsString()).definition(getSmallDefinition(enumD.toString())).javadoc(enumD.getJavadoc().map(Object::toString).orElse("""")).body(getBodyDefinition(enumD, 200, """")).build();
+}"
+"visitEnum","method","com.cloudurable.java2csv.ClassVisitor.visitEnum","private void visitEnum(String packageName, String importBody, EnumDeclaration enumD) { /* the rest ... */ }","","com.cloudurable.java2csv.ClassVisitor","","private void visitEnum(String packageName, String importBody, EnumDeclaration enumD) {
+    String[] parts = extractJavaDoc(getBodyDefinition(enumD, 200));
+    final String javaDoc = parts[0];
+    final String code = parts[1];
+    Item item = Item.builder().importBody(importBody).type(JavaItemType.ENUM).name(packageName + ""."" + enumD.getNameAsString()).simpleName(enumD.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
     items.add(item);
     System.out.println(item);
     enumD.getMethods().forEach(method -> visitMethod(item, method));
     enumD.getFields().forEach(field -> visitField(item, field));
-}","","com.cloudurable.java2csv.ClassVisitor","",""
+}"
+"JAVA_DOC_REGEX","field","com.cloudurable.java2csv.ClassVisitor.JAVA_DOC_REGEX","static Pattern JAVA_DOC_REGEX = Pattern.compile(""^/\\*\\*.*?\\*/\\s*"", Pattern.DOTALL);","","com.cloudurable.java2csv.ClassVisitor","",""
 "compilationUnit","field","com.cloudurable.java2csv.ClassVisitor.compilationUnit","private final CompilationUnit compilationUnit;","","com.cloudurable.java2csv.ClassVisitor","",""
 "items","field","com.cloudurable.java2csv.ClassVisitor.items","private final List<Item> items;","","com.cloudurable.java2csv.ClassVisitor","",""
 "JavaItemType","enum","com.cloudurable.java2csv.JavaItemType","public enum JavaItemType { /* the rest ... */ }","","","","public enum JavaItemType {
@@ -397,12 +506,16 @@ public void visit(EnumDeclaration n, Void arg) {
         this.type = type;
     }
 
-    private String orEmptyString(String part) {
-        return part == null ? """" : part;
-    }
-
     public static List<String> headers() {
         return List.of(""Name"", ""Type"", ""FullName"", ""Definition"", ""JavaDoc"", ""Parent"", ""Imports"", ""Body"");
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    private String orEmptyString(String part) {
+        return part == null ? """" : part;
     }
 
     public List<String> row() {
@@ -442,14 +555,7 @@ public void visit(EnumDeclaration n, Void arg) {
         return ""Item{"" + ""simpleName='"" + simpleName + '\'' + "", type="" + type + "", name='"" + name + '\'' + "", definition='"" + definition + '\'' + "", parent="" + parent + "", importBody='"" + importBody + '\'' + "", javadoc='"" + javadoc + '\'' + "", body='"" + body + '\'' + '}';
     }
 
-    public static Builder builder() {
-        return new Builder();
-    }
-
     public static class Builder {
-
-        private Builder() {
-        }
 
         private String body;
 
@@ -465,12 +571,15 @@ public void visit(EnumDeclaration n, Void arg) {
 
         private String simpleName;
 
+        private JavaItemType type;
+
+        private Builder() {
+        }
+
         public Builder simpleName(String simpleName) {
             this.simpleName = simpleName;
             return this;
         }
-
-        private JavaItemType type;
 
         public Builder type(JavaItemType type) {
             this.type = type;
@@ -512,43 +621,44 @@ public void visit(EnumDeclaration n, Void arg) {
         }
     }
 }"
-"orEmptyString","method","com.cloudurable.java2csv.Item.orEmptyString","private String orEmptyString(String part) {
-    return part == null ? """" : part;
-}","","com.cloudurable.java2csv.Item","",""
-"headers","method","com.cloudurable.java2csv.Item.headers","public static List<String> headers() {
+"headers","method","com.cloudurable.java2csv.Item.headers","public static List<String> headers() { /* the rest ... */ }","","com.cloudurable.java2csv.Item","","public static List<String> headers() {
     return List.of(""Name"", ""Type"", ""FullName"", ""Definition"", ""JavaDoc"", ""Parent"", ""Imports"", ""Body"");
-}","","com.cloudurable.java2csv.Item","",""
-"row","method","com.cloudurable.java2csv.Item.row","public List<String> row() {
+}"
+"builder","method","com.cloudurable.java2csv.Item.builder","public static Builder builder() { /* the rest ... */ }","","com.cloudurable.java2csv.Item","","public static Builder builder() {
+    return new Builder();
+}"
+"orEmptyString","method","com.cloudurable.java2csv.Item.orEmptyString","private String orEmptyString(String part) { /* the rest ... */ }","","com.cloudurable.java2csv.Item","","private String orEmptyString(String part) {
+    return part == null ? """" : part;
+}"
+"row","method","com.cloudurable.java2csv.Item.row","public List<String> row() { /* the rest ... */ }","","com.cloudurable.java2csv.Item","","public List<String> row() {
     return List.of(simpleName, type.toString().toLowerCase(), name, definition, javadoc, parent != null ? parent.getName() : """", importBody, body);
-}","","com.cloudurable.java2csv.Item","",""
-"getImportBody","method","com.cloudurable.java2csv.Item.getImportBody","public String getImportBody() {
+}"
+"getImportBody","method","com.cloudurable.java2csv.Item.getImportBody","public String getImportBody() { /* the rest ... */ }","","com.cloudurable.java2csv.Item","","public String getImportBody() {
     return importBody;
-}","","com.cloudurable.java2csv.Item","",""
-"getBody","method","com.cloudurable.java2csv.Item.getBody","public String getBody() {
+}"
+"getBody","method","com.cloudurable.java2csv.Item.getBody","public String getBody() { /* the rest ... */ }","","com.cloudurable.java2csv.Item","","public String getBody() {
     return body;
-}","","com.cloudurable.java2csv.Item","",""
-"getJavadoc","method","com.cloudurable.java2csv.Item.getJavadoc","public String getJavadoc() {
+}"
+"getJavadoc","method","com.cloudurable.java2csv.Item.getJavadoc","public String getJavadoc() { /* the rest ... */ }","","com.cloudurable.java2csv.Item","","public String getJavadoc() {
     return javadoc;
-}","","com.cloudurable.java2csv.Item","",""
-"getName","method","com.cloudurable.java2csv.Item.getName","public String getName() {
+}"
+"getName","method","com.cloudurable.java2csv.Item.getName","public String getName() { /* the rest ... */ }","","com.cloudurable.java2csv.Item","","public String getName() {
     return name;
-}","","com.cloudurable.java2csv.Item","",""
-"getDefinition","method","com.cloudurable.java2csv.Item.getDefinition","public String getDefinition() {
+}"
+"getDefinition","method","com.cloudurable.java2csv.Item.getDefinition","public String getDefinition() { /* the rest ... */ }","","com.cloudurable.java2csv.Item","","public String getDefinition() {
     return definition;
-}","","com.cloudurable.java2csv.Item","",""
-"getParent","method","com.cloudurable.java2csv.Item.getParent","public Item getParent() {
+}"
+"getParent","method","com.cloudurable.java2csv.Item.getParent","public Item getParent() { /* the rest ... */ }","","com.cloudurable.java2csv.Item","","public Item getParent() {
     return parent;
-}","","com.cloudurable.java2csv.Item","",""
-"getType","method","com.cloudurable.java2csv.Item.getType","public JavaItemType getType() {
+}"
+"getType","method","com.cloudurable.java2csv.Item.getType","public JavaItemType getType() { /* the rest ... */ }","","com.cloudurable.java2csv.Item","","public JavaItemType getType() {
     return type;
-}","","com.cloudurable.java2csv.Item","",""
+}"
 "toString","method","com.cloudurable.java2csv.Item.toString","@Override
+public String toString() { /* the rest ... */ }","","com.cloudurable.java2csv.Item","","@Override
 public String toString() {
     return ""Item{"" + ""simpleName='"" + simpleName + '\'' + "", type="" + type + "", name='"" + name + '\'' + "", definition='"" + definition + '\'' + "", parent="" + parent + "", importBody='"" + importBody + '\'' + "", javadoc='"" + javadoc + '\'' + "", body='"" + body + '\'' + '}';
-}","","com.cloudurable.java2csv.Item","",""
-"builder","method","com.cloudurable.java2csv.Item.builder","public static Builder builder() {
-    return new Builder();
-}","","com.cloudurable.java2csv.Item","",""
+}"
 "importBody","field","com.cloudurable.java2csv.Item.importBody","private final String importBody;","","com.cloudurable.java2csv.Item","",""
 "body","field","com.cloudurable.java2csv.Item.body","private final String body;","","com.cloudurable.java2csv.Item","",""
 "javadoc","field","com.cloudurable.java2csv.Item.javadoc","private final String javadoc;","","com.cloudurable.java2csv.Item","",""
@@ -559,9 +669,6 @@ public String toString() {
 "type","field","com.cloudurable.java2csv.Item.type","private final JavaItemType type;","","com.cloudurable.java2csv.Item","",""
 "Builder","class","com.cloudurable.java2csv.Builder","public static class Builder { /* the rest ... */ }","","","import java.util.List;
 ","public static class Builder {
-
-    private Builder() {
-    }
 
     private String body;
 
@@ -577,12 +684,15 @@ public String toString() {
 
     private String simpleName;
 
+    private JavaItemType type;
+
+    private Builder() {
+    }
+
     public Builder simpleName(String simpleName) {
         this.simpleName = simpleName;
         return this;
     }
-
-    private JavaItemType type;
 
     public Builder type(JavaItemType type) {
         this.type = type;
@@ -623,41 +733,41 @@ public String toString() {
         return new Item(importBody, body, javadoc, name, simpleName, definition, parent, type);
     }
 }"
-"simpleName","method","com.cloudurable.java2csv.Builder.simpleName","public Builder simpleName(String simpleName) {
+"simpleName","method","com.cloudurable.java2csv.Builder.simpleName","public Builder simpleName(String simpleName) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder simpleName(String simpleName) {
     this.simpleName = simpleName;
     return this;
-}","","com.cloudurable.java2csv.Builder","",""
-"type","method","com.cloudurable.java2csv.Builder.type","public Builder type(JavaItemType type) {
+}"
+"type","method","com.cloudurable.java2csv.Builder.type","public Builder type(JavaItemType type) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder type(JavaItemType type) {
     this.type = type;
     return this;
-}","","com.cloudurable.java2csv.Builder","",""
-"importBody","method","com.cloudurable.java2csv.Builder.importBody","public Builder importBody(String importBody) {
+}"
+"importBody","method","com.cloudurable.java2csv.Builder.importBody","public Builder importBody(String importBody) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder importBody(String importBody) {
     this.importBody = importBody;
     return this;
-}","","com.cloudurable.java2csv.Builder","",""
-"body","method","com.cloudurable.java2csv.Builder.body","public Builder body(String body) {
+}"
+"body","method","com.cloudurable.java2csv.Builder.body","public Builder body(String body) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder body(String body) {
     this.body = body;
     return this;
-}","","com.cloudurable.java2csv.Builder","",""
-"javadoc","method","com.cloudurable.java2csv.Builder.javadoc","public Builder javadoc(String javadoc) {
+}"
+"javadoc","method","com.cloudurable.java2csv.Builder.javadoc","public Builder javadoc(String javadoc) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder javadoc(String javadoc) {
     this.javadoc = javadoc;
     return this;
-}","","com.cloudurable.java2csv.Builder","",""
-"name","method","com.cloudurable.java2csv.Builder.name","public Builder name(String name) {
+}"
+"name","method","com.cloudurable.java2csv.Builder.name","public Builder name(String name) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder name(String name) {
     this.name = name;
     return this;
-}","","com.cloudurable.java2csv.Builder","",""
-"definition","method","com.cloudurable.java2csv.Builder.definition","public Builder definition(String definition) {
+}"
+"definition","method","com.cloudurable.java2csv.Builder.definition","public Builder definition(String definition) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder definition(String definition) {
     this.definition = definition;
     return this;
-}","","com.cloudurable.java2csv.Builder","",""
-"parent","method","com.cloudurable.java2csv.Builder.parent","public Builder parent(Item parent) {
+}"
+"parent","method","com.cloudurable.java2csv.Builder.parent","public Builder parent(Item parent) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder parent(Item parent) {
     this.parent = parent;
     return this;
-}","","com.cloudurable.java2csv.Builder","",""
-"build","method","com.cloudurable.java2csv.Builder.build","public Item build() {
+}"
+"build","method","com.cloudurable.java2csv.Builder.build","public Item build() { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Item build() {
     return new Item(importBody, body, javadoc, name, simpleName, definition, parent, type);
-}","","com.cloudurable.java2csv.Builder","",""
+}"
 "body","field","com.cloudurable.java2csv.Builder.body","private String body;","","com.cloudurable.java2csv.Builder","",""
 "javadoc","field","com.cloudurable.java2csv.Builder.javadoc","private String javadoc;","","com.cloudurable.java2csv.Builder","",""
 "name","field","com.cloudurable.java2csv.Builder.name","private String name;","","com.cloudurable.java2csv.Builder","",""
