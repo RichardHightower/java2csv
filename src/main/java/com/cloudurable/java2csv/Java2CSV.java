@@ -66,7 +66,17 @@ public class Java2CSV {
     private static String getBodyDefinition(Object n, int numLinesMax) {
         String[] lines = n.toString().split("\n");
         if (lines.length > numLinesMax) {
-            return "";
+
+            int count = 0;
+            StringBuilder builder = new StringBuilder(lines.length * 20);
+            for (String line : lines) {
+                builder.append(line).append('\n');
+                count++;
+                if (count >= 200) {
+                    break;
+                }
+            }
+            return builder.toString();
         } else {
             return n.toString();
         }
@@ -198,9 +208,14 @@ public class Java2CSV {
          * @param cls         the class or interface
          */
         public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) {
-            String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
+
+            if (cls.getNameAsString().toString().equals("Java2CSV")) {
+                System.out.println("");
+            }
+            final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
             final String javaDoc = parts[0];
             final String code = parts[1];
+
 
             Item item = Item.builder()
                     .importBody(importBody)

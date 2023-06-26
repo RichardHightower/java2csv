@@ -1,5 +1,8 @@
 "Name","Type","FullName","Definition","JavaDoc","Parent","Imports","Body"
-"Java2CSV","class","com.cloudurable.java2csv.Java2CSV","{ /* the rest ... */ }","","","import com.github.javaparser.StaticJavaParser;
+"Java2CSV","class","com.cloudurable.java2csv.Java2CSV","public class Java2CSV { /* the rest ... */ }","/**
+ * Parse Java files and turn them into CSV files.
+ */
+","","import com.github.javaparser.StaticJavaParser;
 
 import com.github.javaparser.ast.CompilationUnit;
 
@@ -40,7 +43,204 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import java.util.stream.Stream;
-",""
+","public class Java2CSV {
+
+    /**
+     * Extracts the field name from a FieldDeclaration.
+     *
+     * @param field the input field
+     * @return the field name
+     */
+    private static String fieldName(FieldDeclaration field) {
+        final Optional<VariableDeclarator> variableDeclarator = field.getChildNodes().stream().filter(node -> node instanceof VariableDeclarator).map(n -> (VariableDeclarator) n).findFirst();
+        return variableDeclarator.map(NodeWithSimpleName::getNameAsString).orElse(""NO_NAME"");
+    }
+
+    /**
+     * Returns a small definition of the given text by keeping only the first line and replacing the rest with a placeholder.
+     *
+     * @param text the input text
+     * @return the small definition
+     */
+    private static String getSmallDefinition(String text) {
+        // Split the string into an array of lines
+        String[] lines = text.split(""\\{"");
+        return lines[0] + ""{ /* the rest ... */ }"";
+    }
+
+    /**
+     * Returns the definition of the given object's body with a maximum number of lines.
+     * If the number of lines exceeds the maximum, an empty string is returned.
+     *
+     * @param n            the object
+     * @param numLinesMax  the maximum number of lines
+     * @return the body definition
+     */
+    private static String getBodyDefinition(Object n, int numLinesMax) {
+        String[] lines = n.toString().split(""\n"");
+        if (lines.length > numLinesMax) {
+            int count = 0;
+            StringBuilder builder = new StringBuilder(lines.length * 20);
+            for (String line : lines) {
+                builder.append(line).append('\n');
+                count++;
+                if (count >= 200) {
+                    break;
+                }
+            }
+            return builder.toString();
+        } else {
+            return n.toString();
+        }
+    }
+
+    /**
+     * Entry point of the program.
+     *
+     * @param args the command line arguments
+     * @throws IOException if an I/O error occurs
+     */
+    public static void main(String[] args) throws IOException {
+        try {
+            final String directoryPath = args.length > 0 ? args[0] : ""."";
+            final String outputFile = args.length > 1 ? args[1] : ""output.csv"";
+            File dir = new File(directoryPath).getCanonicalFile();
+            if (dir.exists() && dir.isDirectory()) {
+                List<Item> items = scanDirectory(dir);
+                List<List<String>> lines = items.stream().map(Item::row).collect(Collectors.toList());
+                try (CSVWriter writer = new CSVWriter(new FileWriter(outputFile))) {
+                    writer.writeNext(Item.headers().toArray(new String[0]));
+                    for (List<String> line : lines) {
+                        writer.writeNext(line.toArray(new String[0]));
+                    }
+                }
+            } else {
+                System.out.printf(""Directory does not exist %s or is not a directory"", dir);
+            }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    /**
+     * Scans the given directory and returns a list of items representing the Java code.
+     *
+     * @param directoryPath the directory path
+     * @return the list of items
+     * @throws IOException if an I/O error occurs
+     */
+    private static List<Item> scanDirectory(File directoryPath) throws IOException {
+        List<Item> items = new ArrayList<>(32);
+        try (Stream<Path> walk = Files.walk(directoryPath.toPath())) {
+            walk.filter(Files::isRegularFile).filter(p -> p.toString().endsWith("".java"")).forEach(p -> parseFile(p.toFile(), items));
+        } catch (IOException e) {
+            // Handle the IOException if an error occurs while scanning the directory
+            System.err.println(""An error occurred while scanning the directory: "" + e.getMessage());
+            throw e;
+        }
+        return items;
+    }
+
+    /**
+     * Parses the given file and adds the parsed items to the list.
+     *
+     * @param file  the file to parse
+     * @param items the list of items to add to
+     */
+    private static void parseFile(File file, List<Item> items) {
+        System.out.println(file);
+        try {
+            CompilationUnit compilationUnit = StaticJavaParser.parse(file);
+            compilationUnit.accept(new ClassVisitor(compilationUnit, items), null);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Visitor for visiting classes, interfaces, and enums.
+     */
+    private static class ClassVisitor extends VoidVisitorAdapter<Void> {
+
+        static Pattern JAVA_DOC_REGEX = Pattern.compile(""^/\\*\\*.*?\\*/\\s*"", Pattern.DOTALL);
+
+        private final CompilationUnit compilationUnit;
+
+        private final List<Item> items;
+
+        public ClassVisitor(CompilationUnit compilationUnit, List<Item> items) {
+            this.compilationUnit = compilationUnit;
+            this.items = items;
+        }
+
+        /**
+         * Extracts the Javadoc comment and method code from the given code.
+         *
+         * @param code the input code
+         * @return an array containing the Javadoc comment and method code
+         */
+        public static String[] extractJavaDoc(String code) {
+            // Define the regular expression pattern to match Javadoc comments
+            Matcher matcher = JAVA_DOC_REGEX.matcher(code);
+            if (matcher.find()) {
+                // Extract the Javadoc comment
+                String javadoc = matcher.group();
+                // Extract the method code
+                String methodCode = code.substring(matcher.end());
+                return new String[] { javadoc, methodCode };
+            } else {
+                // No Javadoc found
+                return new String[] { """", code };
+            }
+        }
+
+        @Override
+        public void visit(ClassOrInterfaceDeclaration cls, Void arg) {
+            if (!cls.isInnerClass()) {
+                visitClass(compilationUnit.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse(""""), compilationUnit.getImports().stream().map(Node::toString).collect(Collectors.joining(""\n"")), cls);
+            }
+            super.visit(cls, arg);
+        }
+
+        /**
+         * Visits a class or interface.
+         *
+         * @param packageName the package name
+         * @param importBody  the import statements
+         * @param cls         the class or interface
+         */
+        public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) {
+            if (cls.getNameAsString().toString().equals(""Java2CSV"")) {
+                System.out.println("""");
+            }
+            final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
+            final String javaDoc = parts[0];
+            final String code = parts[1];
+            Item item = Item.builder().importBody(importBody).type(cls.isInterface() ? JavaItemType.INTERFACE : JavaItemType.CLASS).name(packageName + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
+            items.add(item);
+            System.out.println(item);
+            cls.getImplementedTypes().stream().filter(ClassOrInterfaceType::isClassOrInterfaceType).forEach(clsInner -> visitClassType(packageName, importBody, item, clsInner.asClassOrInterfaceType()));
+            cls.getMethods().forEach(method -> visitMethod(item, method));
+            cls.getFields().forEach(field -> visitField(item, field));
+        }
+
+        /**
+         * Visits a class or interface type.
+         *
+         * @param packageName the package name
+         * @param importBody  the import statements
+         * @param parent      the parent item
+         * @param cls         the class or interface type
+         */
+        private void visitClassType(String packageName, String importBody, Item parent, ClassOrInterfaceType cls) {
+            final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
+            final String javaDoc = parts[0];
+            final String code = parts[1];
+            Item item = Item.builder().importBody(importBody).type(JavaItemType.CLASS).name(parent.getName() + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).parent(parent).body(code).build();
+            items.add(item);
+            System.out.println(item);
+        }
+"
 "fieldName","method","com.cloudurable.java2csv.Java2CSV.fieldName","private static String fieldName(FieldDeclaration field) { /* the rest ... */ }","/**
  * Extracts the field name from a FieldDeclaration.
  *
@@ -73,7 +273,16 @@ import java.util.stream.Stream;
 ","com.cloudurable.java2csv.Java2CSV","","private static String getBodyDefinition(Object n, int numLinesMax) {
     String[] lines = n.toString().split(""\n"");
     if (lines.length > numLinesMax) {
-        return """";
+        int count = 0;
+        StringBuilder builder = new StringBuilder(lines.length * 20);
+        for (String line : lines) {
+            builder.append(line).append('\n');
+            count++;
+            if (count >= 200) {
+                break;
+            }
+        }
+        return builder.toString();
     } else {
         return n.toString();
     }
@@ -232,7 +441,10 @@ import java.util.stream.Stream;
      * @param cls         the class or interface
      */
     public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) {
-        String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
+        if (cls.getNameAsString().toString().equals(""Java2CSV"")) {
+            System.out.println("""");
+        }
+        final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
         final String javaDoc = parts[0];
         final String code = parts[1];
         Item item = Item.builder().importBody(importBody).type(cls.isInterface() ? JavaItemType.INTERFACE : JavaItemType.CLASS).name(packageName + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
@@ -350,7 +562,10 @@ public void visit(ClassOrInterfaceDeclaration cls, Void arg) {
  * @param cls         the class or interface
  */
 ","com.cloudurable.java2csv.ClassVisitor","","public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) {
-    String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
+    if (cls.getNameAsString().toString().equals(""Java2CSV"")) {
+        System.out.println("""");
+    }
+    final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
     final String javaDoc = parts[0];
     final String code = parts[1];
     Item item = Item.builder().importBody(importBody).type(cls.isInterface() ? JavaItemType.INTERFACE : JavaItemType.CLASS).name(packageName + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
@@ -447,8 +662,208 @@ public void visit(EnumDeclaration n, Void arg) {
     METHOD,
     FIELD
 }"
-"Item","class","com.cloudurable.java2csv.Item","{ /* the rest ... */ }","","","import java.util.List;
-",""
+"Item","class","com.cloudurable.java2csv.Item","public class Item { /* the rest ... */ }","/**
+ * Represents an item in Java code, such as a class, method, or field.
+ */
+","","import java.util.List;
+","public class Item {
+
+    /**
+     * Import body, the imports for the class.
+     */
+    private final String importBody;
+
+    /**
+     *  Code body, the whole code for the item.
+     */
+    private final String body;
+
+    /**
+     *  JavaDoc, the javadoc for the item.
+     */
+    private final String javadoc;
+
+    private final String name;
+
+    private final String simpleName;
+
+    private final String definition;
+
+    private final Item parent;
+
+    private final JavaItemType type;
+
+    /**
+     * Constructs a new Item.
+     *
+     * @param importBody  the import statements associated with the item
+     * @param body        the source code body of the item
+     * @param javadoc     the Javadoc documentation of the item
+     * @param name        the fully qualified name of the item
+     * @param simpleName  the simple name of the item
+     * @param definition  the definition of the item
+     * @param parent      the parent item of the current item (e.g., for inner classes)
+     * @param type        the type of the item (e.g., class, method, field)
+     */
+    public Item(String importBody, String body, String javadoc, String name, String simpleName, String definition, Item parent, JavaItemType type) {
+        this.importBody = orEmptyString(importBody);
+        this.body = orEmptyString(body);
+        this.javadoc = orEmptyString(javadoc);
+        this.name = orEmptyString(name);
+        this.simpleName = orEmptyString(simpleName);
+        this.definition = orEmptyString(definition);
+        this.parent = parent;
+        this.type = type;
+    }
+
+    /**
+     * Returns the column headers for the CSV representation of an Item.
+     *
+     * @return the column headers
+     */
+    public static List<String> headers() {
+        return List.of(""Name"", ""Type"", ""FullName"", ""Definition"", ""JavaDoc"", ""Parent"", ""Imports"", ""Body"");
+    }
+
+    /**
+     * Returns a builder to construct an Item.
+     *
+     * @return the Item builder
+     */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    private String orEmptyString(String part) {
+        return part == null ? """" : part;
+    }
+
+    /**
+     * Returns a row representing the Item for the CSV output.
+     *
+     * @return the row representing the Item
+     */
+    public List<String> row() {
+        return List.of(simpleName, type.toString().toLowerCase(), name, definition, javadoc, parent != null ? parent.getName() : """", importBody, body);
+    }
+
+    /**
+     * Returns the import statements associated with the item.
+     *
+     * @return the import statements
+     */
+    public String getImportBody() {
+        return importBody;
+    }
+
+    /**
+     * Returns the source code body of the item.
+     *
+     * @return the source code body
+     */
+    public String getBody() {
+        return body;
+    }
+
+    /**
+     * Returns the Javadoc documentation of the item.
+     *
+     * @return the Javadoc documentation
+     */
+    public String getJavadoc() {
+        return javadoc;
+    }
+
+    /**
+     * Returns the fully qualified name of the item.
+     *
+     * @return the fully qualified name
+     */
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * Returns the definition of the item.
+     *
+     * @return the definition
+     */
+    public String getDefinition() {
+        return definition;
+    }
+
+    /**
+     * Returns the parent item of the current item.
+     *
+     * @return the parent item
+     */
+    public Item getParent() {
+        return parent;
+    }
+
+    /**
+     * Returns the type of the item.
+     *
+     * @return the item type
+     */
+    public JavaItemType getType() {
+        return type;
+    }
+
+    @Override
+    public String toString() {
+        return ""Item{"" + ""simpleName='"" + simpleName + '\'' + "", type="" + type + "", name='"" + name + '\'' + "", definition='"" + definition + '\'' + "", parent="" + parent + "", importBody='"" + importBody + '\'' + "", javadoc='"" + javadoc + '\'' + "", body='"" + body + '\'' + '}';
+    }
+
+    /**
+     * Builder class for constructing an Item.
+     */
+    public static class Builder {
+
+        private String body;
+
+        private String javadoc;
+
+        private String name;
+
+        private String definition;
+
+        private Item parent;
+
+        private String importBody;
+
+        private String simpleName;
+
+        private JavaItemType type;
+
+        private Builder() {
+        }
+
+        public Builder simpleName(String simpleName) {
+            this.simpleName = simpleName;
+            return this;
+        }
+
+        public Builder type(JavaItemType type) {
+            this.type = type;
+            return this;
+        }
+
+        public Builder importBody(String importBody) {
+            this.importBody = importBody;
+            return this;
+        }
+
+        public Builder body(String body) {
+            this.body = body;
+            return this;
+        }
+
+        public Builder javadoc(String javadoc) {
+            this.javadoc = javadoc;
+            return this;
+        }
+"
 "headers","method","com.cloudurable.java2csv.Item.headers","public static List<String> headers() { /* the rest ... */ }","/**
  * Returns the column headers for the CSV representation of an Item.
  *
