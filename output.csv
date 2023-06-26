@@ -267,7 +267,10 @@ import java.util.stream.Stream;
      * @param field  the field
      */
     private void visitField(Item parent, FieldDeclaration field) {
-        Item item = Item.builder().type(JavaItemType.FIELD).name(parent.getName() + ""."" + fieldName(field)).simpleName(fieldName(field)).definition(field.toString()).javadoc(field.getJavadoc().map(Object::toString).orElse("""")).parent(parent).build();
+        final String[] parts = extractJavaDoc(field.toString());
+        final String javaDoc = parts[0];
+        final String code = parts[1];
+        Item item = Item.builder().type(JavaItemType.FIELD).name(parent.getName() + ""."" + fieldName(field)).simpleName(fieldName(field)).definition(code).javadoc(javaDoc).parent(parent).build();
         items.add(item);
         System.out.println(item);
     }
@@ -380,7 +383,10 @@ public void visit(ClassOrInterfaceDeclaration cls, Void arg) {
  * @param field  the field
  */
 ","com.cloudurable.java2csv.ClassVisitor","","private void visitField(Item parent, FieldDeclaration field) {
-    Item item = Item.builder().type(JavaItemType.FIELD).name(parent.getName() + ""."" + fieldName(field)).simpleName(fieldName(field)).definition(field.toString()).javadoc(field.getJavadoc().map(Object::toString).orElse("""")).parent(parent).build();
+    final String[] parts = extractJavaDoc(field.toString());
+    final String javaDoc = parts[0];
+    final String code = parts[1];
+    Item item = Item.builder().type(JavaItemType.FIELD).name(parent.getName() + ""."" + fieldName(field)).simpleName(fieldName(field)).definition(code).javadoc(javaDoc).parent(parent).build();
     items.add(item);
     System.out.println(item);
 }"
@@ -424,9 +430,22 @@ public void visit(EnumDeclaration n, Void arg) {
 "JAVA_DOC_REGEX","field","com.cloudurable.java2csv.ClassVisitor.JAVA_DOC_REGEX","static Pattern JAVA_DOC_REGEX = Pattern.compile(""^/\\*\\*.*?\\*/\\s*"", Pattern.DOTALL);","","com.cloudurable.java2csv.ClassVisitor","",""
 "compilationUnit","field","com.cloudurable.java2csv.ClassVisitor.compilationUnit","private final CompilationUnit compilationUnit;","","com.cloudurable.java2csv.ClassVisitor","",""
 "items","field","com.cloudurable.java2csv.ClassVisitor.items","private final List<Item> items;","","com.cloudurable.java2csv.ClassVisitor","",""
-"JavaItemType","enum","com.cloudurable.java2csv.JavaItemType","public enum JavaItemType { /* the rest ... */ }","","","","public enum JavaItemType {
+"JavaItemType","enum","com.cloudurable.java2csv.JavaItemType","public enum JavaItemType { /* the rest ... */ }","/**
+ * Enum representing different types of Java items, such as classes, interfaces, enums, methods, and fields.
+ */
+","","","public enum JavaItemType {
 
-    CLASS, INTERFACE, ENUM, METHOD, FIELD
+    /**
+     * Class defines a class .
+     */
+    CLASS,
+    /**
+     * Interface defines a class .
+     */
+    INTERFACE,
+    ENUM,
+    METHOD,
+    FIELD
 }"
 "Item","class","com.cloudurable.java2csv.Item","{ /* the rest ... */ }","","","import java.util.List;
 ",""
@@ -518,9 +537,18 @@ public String toString() { /* the rest ... */ }","","com.cloudurable.java2csv.It
 public String toString() {
     return ""Item{"" + ""simpleName='"" + simpleName + '\'' + "", type="" + type + "", name='"" + name + '\'' + "", definition='"" + definition + '\'' + "", parent="" + parent + "", importBody='"" + importBody + '\'' + "", javadoc='"" + javadoc + '\'' + "", body='"" + body + '\'' + '}';
 }"
-"importBody","field","com.cloudurable.java2csv.Item.importBody","private final String importBody;","","com.cloudurable.java2csv.Item","",""
-"body","field","com.cloudurable.java2csv.Item.body","private final String body;","","com.cloudurable.java2csv.Item","",""
-"javadoc","field","com.cloudurable.java2csv.Item.javadoc","private final String javadoc;","","com.cloudurable.java2csv.Item","",""
+"importBody","field","com.cloudurable.java2csv.Item.importBody","private final String importBody;","/**
+ * Import body, the imports for the class.
+ */
+","com.cloudurable.java2csv.Item","",""
+"body","field","com.cloudurable.java2csv.Item.body","private final String body;","/**
+ *  Code body, the whole code for the item.
+ */
+","com.cloudurable.java2csv.Item","",""
+"javadoc","field","com.cloudurable.java2csv.Item.javadoc","private final String javadoc;","/**
+ *  JavaDoc, the javadoc for the item.
+ */
+","com.cloudurable.java2csv.Item","",""
 "name","field","com.cloudurable.java2csv.Item.name","private final String name;","","com.cloudurable.java2csv.Item","",""
 "simpleName","field","com.cloudurable.java2csv.Item.simpleName","private final String simpleName;","","com.cloudurable.java2csv.Item","",""
 "definition","field","com.cloudurable.java2csv.Item.definition","private final String definition;","","com.cloudurable.java2csv.Item","",""

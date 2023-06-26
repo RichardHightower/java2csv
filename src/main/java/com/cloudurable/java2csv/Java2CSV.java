@@ -254,12 +254,18 @@ public class Java2CSV {
          * @param field  the field
          */
         private void visitField(Item parent, FieldDeclaration field) {
+
+            final String[] parts = extractJavaDoc(field.toString());
+            final String javaDoc = parts[0];
+            final String code = parts[1];
+
+
             Item item = Item.builder()
                     .type(JavaItemType.FIELD)
                     .name(parent.getName() + "." + fieldName(field))
                     .simpleName(fieldName(field))
-                    .definition(field.toString())
-                    .javadoc(field.getJavadoc().map(Object::toString).orElse(""))
+                    .definition(code)
+                    .javadoc(javaDoc)
                     .parent(parent)
                     .build();
             items.add(item);

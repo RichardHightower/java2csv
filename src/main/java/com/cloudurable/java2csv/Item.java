@@ -6,8 +6,14 @@ import java.util.List;
  * Represents an item in Java code, such as a class, method, or field.
  */
 public class Item {
+
+    /** Import body, the imports for the class. */
     private final String importBody;
+
+    /**  Code body, the whole code for the item. */
     private final String body;
+
+    /**  JavaDoc, the javadoc for the item. */
     private final String javadoc;
     private final String name;
     private final String simpleName;
