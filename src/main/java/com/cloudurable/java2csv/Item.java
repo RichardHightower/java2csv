@@ -2,18 +2,31 @@ package com.cloudurable.java2csv;
 
 import java.util.List;
 
+/**
+ * Represents an item in Java code, such as a class, method, or field.
+ */
 public class Item {
     private final String importBody;
     private final String body;
     private final String javadoc;
     private final String name;
-
     private final String simpleName;
     private final String definition;
     private final Item parent;
-
     private final JavaItemType type;
 
+    /**
+     * Constructs a new Item.
+     *
+     * @param importBody  the import statements associated with the item
+     * @param body        the source code body of the item
+     * @param javadoc     the Javadoc documentation of the item
+     * @param name        the fully qualified name of the item
+     * @param simpleName  the simple name of the item
+     * @param definition  the definition of the item
+     * @param parent      the parent item of the current item (e.g., for inner classes)
+     * @param type        the type of the item (e.g., class, method, field)
+     */
     public Item(String importBody, String body, String javadoc, String name, String simpleName, String definition, Item parent, JavaItemType type) {
         this.importBody = orEmptyString(importBody);
         this.body = orEmptyString(body);
@@ -25,10 +38,20 @@ public class Item {
         this.type = type;
     }
 
+    /**
+     * Returns the column headers for the CSV representation of an Item.
+     *
+     * @return the column headers
+     */
     public static List<String> headers() {
         return List.of("Name", "Type", "FullName", "Definition", "JavaDoc", "Parent", "Imports", "Body");
     }
 
+    /**
+     * Returns a builder to construct an Item.
+     *
+     * @return the Item builder
+     */
     public static Builder builder() {
         return new Builder();
     }
@@ -37,34 +60,74 @@ public class Item {
         return part == null ? "" : part;
     }
 
+    /**
+     * Returns a row representing the Item for the CSV output.
+     *
+     * @return the row representing the Item
+     */
     public List<String> row() {
         return List.of(simpleName, type.toString().toLowerCase(), name, definition, javadoc, parent != null ? parent.getName() : "", importBody, body);
     }
 
+    /**
+     * Returns the import statements associated with the item.
+     *
+     * @return the import statements
+     */
     public String getImportBody() {
         return importBody;
     }
 
+    /**
+     * Returns the source code body of the item.
+     *
+     * @return the source code body
+     */
     public String getBody() {
         return body;
     }
 
+    /**
+     * Returns the Javadoc documentation of the item.
+     *
+     * @return the Javadoc documentation
+     */
     public String getJavadoc() {
         return javadoc;
     }
 
+    /**
+     * Returns the fully qualified name of the item.
+     *
+     * @return the fully qualified name
+     */
     public String getName() {
         return name;
     }
 
+    /**
+     * Returns the definition of the item.
+     *
+     * @return the definition
+     */
     public String getDefinition() {
         return definition;
     }
 
+    /**
+     * Returns the parent item of the current item.
+     *
+     * @return the parent item
+     */
     public Item getParent() {
         return parent;
     }
 
+    /**
+     * Returns the type of the item.
+     *
+     * @return the item type
+     */
     public JavaItemType getType() {
         return type;
     }
@@ -83,6 +146,9 @@ public class Item {
                 '}';
     }
 
+    /**
+     * Builder class for constructing an Item.
+     */
     public static class Builder {
         private String body;
         private String javadoc;
@@ -136,9 +202,13 @@ public class Item {
             return this;
         }
 
+        /**
+         * Builds and returns the Item.
+         *
+         * @return the constructed Item
+         */
         public Item build() {
             return new Item(importBody, body, javadoc, name, simpleName, definition, parent, type);
         }
     }
-
 }
