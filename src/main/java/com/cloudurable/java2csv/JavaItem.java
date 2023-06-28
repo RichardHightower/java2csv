@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Represents an item in Java code, such as a class, method, or field.
  */
-public class Item {
+public class JavaItem {
 
     /** Import body, the imports for the class. */
     private final String importBody;
@@ -18,7 +18,7 @@ public class Item {
     private final String name;
     private final String simpleName;
     private final String definition;
-    private final Item parent;
+    private final JavaItem parent;
     private final JavaItemType type;
 
     /**
@@ -33,7 +33,7 @@ public class Item {
      * @param parent      the parent item of the current item (e.g., for inner classes)
      * @param type        the type of the item (e.g., class, method, field)
      */
-    public Item(String importBody, String body, String javadoc, String name, String simpleName, String definition, Item parent, JavaItemType type) {
+    public JavaItem(String importBody, String body, String javadoc, String name, String simpleName, String definition, JavaItem parent, JavaItemType type) {
         this.importBody = orEmptyString(importBody);
         this.body = orEmptyString(body);
         this.javadoc = orEmptyString(javadoc);
@@ -125,7 +125,7 @@ public class Item {
      *
      * @return the parent item
      */
-    public Item getParent() {
+    public JavaItem getParent() {
         return parent;
     }
 
@@ -160,7 +160,7 @@ public class Item {
         private String javadoc;
         private String name;
         private String definition;
-        private Item parent;
+        private JavaItem parent;
         private String importBody;
         private String simpleName;
         private JavaItemType type;
@@ -203,7 +203,7 @@ public class Item {
             return this;
         }
 
-        public Builder parent(Item parent) {
+        public Builder parent(JavaItem parent) {
             this.parent = parent;
             return this;
         }
@@ -213,8 +213,8 @@ public class Item {
          *
          * @return the constructed Item
          */
-        public Item build() {
-            return new Item(importBody, body, javadoc, name, simpleName, definition, parent, type);
+        public JavaItem build() {
+            return new JavaItem(importBody, body, javadoc, name, simpleName, definition, parent, type);
         }
     }
 }
