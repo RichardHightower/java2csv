@@ -142,7 +142,6 @@ public class Java2CSV {
      * @param items the list of items to add to
      */
     private static void parseFile(File file, List<Item> items) {
-        System.out.println(file);
         try {
             CompilationUnit compilationUnit = StaticJavaParser.parse(file);
             compilationUnit.accept(new ClassVisitor(compilationUnit, items), null);
@@ -189,7 +188,7 @@ public class Java2CSV {
 
         @Override
         public void visit(ClassOrInterfaceDeclaration cls, Void arg) {
-            if (!cls.isInnerClass()) {
+            if (!cls.isInnerClass() && !cls.isStatic()) {
                 visitClass(
                         compilationUnit.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse(""),
                         compilationUnit.getImports().stream().map(Node::toString).collect(Collectors.joining("\n")),
@@ -208,10 +207,6 @@ public class Java2CSV {
          * @param cls         the class or interface
          */
         public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) {
-
-            if (cls.getNameAsString().toString().equals("Java2CSV")) {
-                System.out.println("");
-            }
             final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
             final String javaDoc = parts[0];
             final String code = parts[1];
@@ -227,10 +222,9 @@ public class Java2CSV {
                     .body(code)
                     .build();
             items.add(item);
-            System.out.println(item);
-            cls.getImplementedTypes().stream()
-                    .filter(ClassOrInterfaceType::isClassOrInterfaceType)
-                    .forEach(clsInner -> visitClassType(packageName, importBody, item, clsInner.asClassOrInterfaceType()));
+ //           System.out.println(item);
+            cls.getChildNodes().stream().filter(n -> n instanceof ClassOrInterfaceDeclaration )
+                    .forEach(clsInner -> visitClassType(packageName, importBody, item, (ClassOrInterfaceDeclaration) clsInner));
             cls.getMethods().forEach(method -> visitMethod(item, method));
             cls.getFields().forEach(field -> visitField(item, field));
         }
@@ -243,7 +237,7 @@ public class Java2CSV {
          * @param parent      the parent item
          * @param cls         the class or interface type
          */
-        private void visitClassType(String packageName, String importBody, Item parent, ClassOrInterfaceType cls) {
+        private void visitClassType(String packageName, String importBody, Item parent, ClassOrInterfaceDeclaration cls) {
             final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
             final String javaDoc = parts[0];
             final String code = parts[1];
@@ -259,7 +253,7 @@ public class Java2CSV {
                     .body(code)
                     .build();
             items.add(item);
-            System.out.println(item);
+            //System.out.println(item);
         }
 
         /**
@@ -284,7 +278,7 @@ public class Java2CSV {
                     .parent(parent)
                     .build();
             items.add(item);
-            System.out.println(item);
+            //System.out.println(item);
         }
 
         /**
@@ -308,7 +302,7 @@ public class Java2CSV {
                     .body(code)
                     .build();
             items.add(item);
-            System.out.println(item);
+            //System.out.println(item);
         }
 
         @Override
@@ -343,7 +337,7 @@ public class Java2CSV {
                     .body(code)
                     .build();
             items.add(item);
-            System.out.println(item);
+            //System.out.println(item);
             enumD.getMethods().forEach(method -> visitMethod(item, method));
             enumD.getFields().forEach(field -> visitField(item, field));
         }

@@ -148,7 +148,6 @@ import java.util.stream.Stream;
      * @param items the list of items to add to
      */
     private static void parseFile(File file, List<Item> items) {
-        System.out.println(file);
         try {
             CompilationUnit compilationUnit = StaticJavaParser.parse(file);
             compilationUnit.accept(new ClassVisitor(compilationUnit, items), null);
@@ -196,7 +195,7 @@ import java.util.stream.Stream;
 
         @Override
         public void visit(ClassOrInterfaceDeclaration cls, Void arg) {
-            if (!cls.isInnerClass()) {
+            if (!cls.isInnerClass() && !cls.isStatic()) {
                 visitClass(compilationUnit.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse(""""), compilationUnit.getImports().stream().map(Node::toString).collect(Collectors.joining(""\n"")), cls);
             }
             super.visit(cls, arg);
@@ -210,16 +209,13 @@ import java.util.stream.Stream;
          * @param cls         the class or interface
          */
         public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) {
-            if (cls.getNameAsString().toString().equals(""Java2CSV"")) {
-                System.out.println("""");
-            }
             final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
             final String javaDoc = parts[0];
             final String code = parts[1];
             Item item = Item.builder().importBody(importBody).type(cls.isInterface() ? JavaItemType.INTERFACE : JavaItemType.CLASS).name(packageName + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
             items.add(item);
-            System.out.println(item);
-            cls.getImplementedTypes().stream().filter(ClassOrInterfaceType::isClassOrInterfaceType).forEach(clsInner -> visitClassType(packageName, importBody, item, clsInner.asClassOrInterfaceType()));
+            //           System.out.println(item);
+            cls.getChildNodes().stream().filter(n -> n instanceof ClassOrInterfaceDeclaration).forEach(clsInner -> visitClassType(packageName, importBody, item, (ClassOrInterfaceDeclaration) clsInner));
             cls.getMethods().forEach(method -> visitMethod(item, method));
             cls.getFields().forEach(field -> visitField(item, field));
         }
@@ -232,15 +228,195 @@ import java.util.stream.Stream;
          * @param parent      the parent item
          * @param cls         the class or interface type
          */
-        private void visitClassType(String packageName, String importBody, Item parent, ClassOrInterfaceType cls) {
+        private void visitClassType(String packageName, String importBody, Item parent, ClassOrInterfaceDeclaration cls) {
             final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
             final String javaDoc = parts[0];
             final String code = parts[1];
             Item item = Item.builder().importBody(importBody).type(JavaItemType.CLASS).name(parent.getName() + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).parent(parent).body(code).build();
             items.add(item);
-            System.out.println(item);
+            //System.out.println(item);
         }
+
+        /**
+         * Visits a field.
+         *
 "
+"ClassVisitor","class","com.cloudurable.java2csv.Java2CSV.ClassVisitor","private static class ClassVisitor extends VoidVisitorAdapter<Void> { /* the rest ... */ }","/**
+ * Visitor for visiting classes, interfaces, and enums.
+ */
+","com.cloudurable.java2csv.Java2CSV","import com.github.javaparser.StaticJavaParser;
+
+import com.github.javaparser.ast.CompilationUnit;
+
+import com.github.javaparser.ast.Node;
+
+import com.github.javaparser.ast.body.*;
+
+import com.github.javaparser.ast.nodeTypes.NodeWithName;
+
+import com.github.javaparser.ast.nodeTypes.NodeWithSimpleName;
+
+import com.github.javaparser.ast.type.ClassOrInterfaceType;
+
+import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
+
+import com.opencsv.CSVWriter;
+
+import java.io.File;
+
+import java.io.FileWriter;
+
+import java.io.IOException;
+
+import java.nio.file.Files;
+
+import java.nio.file.Path;
+
+import java.util.ArrayList;
+
+import java.util.List;
+
+import java.util.Optional;
+
+import java.util.regex.Matcher;
+
+import java.util.regex.Pattern;
+
+import java.util.stream.Collectors;
+
+import java.util.stream.Stream;
+","private static class ClassVisitor extends VoidVisitorAdapter<Void> {
+
+    static Pattern JAVA_DOC_REGEX = Pattern.compile(""^/\\*\\*.*?\\*/\\s*"", Pattern.DOTALL);
+
+    private final CompilationUnit compilationUnit;
+
+    private final List<Item> items;
+
+    public ClassVisitor(CompilationUnit compilationUnit, List<Item> items) {
+        this.compilationUnit = compilationUnit;
+        this.items = items;
+    }
+
+    /**
+     * Extracts the Javadoc comment and method code from the given code.
+     *
+     * @param code the input code
+     * @return an array containing the Javadoc comment and method code
+     */
+    public static String[] extractJavaDoc(String code) {
+        // Define the regular expression pattern to match Javadoc comments
+        Matcher matcher = JAVA_DOC_REGEX.matcher(code);
+        if (matcher.find()) {
+            // Extract the Javadoc comment
+            String javadoc = matcher.group();
+            // Extract the method code
+            String methodCode = code.substring(matcher.end());
+            return new String[] { javadoc, methodCode };
+        } else {
+            // No Javadoc found
+            return new String[] { """", code };
+        }
+    }
+
+    @Override
+    public void visit(ClassOrInterfaceDeclaration cls, Void arg) {
+        if (!cls.isInnerClass() && !cls.isStatic()) {
+            visitClass(compilationUnit.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse(""""), compilationUnit.getImports().stream().map(Node::toString).collect(Collectors.joining(""\n"")), cls);
+        }
+        super.visit(cls, arg);
+    }
+
+    /**
+     * Visits a class or interface.
+     *
+     * @param packageName the package name
+     * @param importBody  the import statements
+     * @param cls         the class or interface
+     */
+    public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) {
+        final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
+        final String javaDoc = parts[0];
+        final String code = parts[1];
+        Item item = Item.builder().importBody(importBody).type(cls.isInterface() ? JavaItemType.INTERFACE : JavaItemType.CLASS).name(packageName + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
+        items.add(item);
+        //           System.out.println(item);
+        cls.getChildNodes().stream().filter(n -> n instanceof ClassOrInterfaceDeclaration).forEach(clsInner -> visitClassType(packageName, importBody, item, (ClassOrInterfaceDeclaration) clsInner));
+        cls.getMethods().forEach(method -> visitMethod(item, method));
+        cls.getFields().forEach(field -> visitField(item, field));
+    }
+
+    /**
+     * Visits a class or interface type.
+     *
+     * @param packageName the package name
+     * @param importBody  the import statements
+     * @param parent      the parent item
+     * @param cls         the class or interface type
+     */
+    private void visitClassType(String packageName, String importBody, Item parent, ClassOrInterfaceDeclaration cls) {
+        final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
+        final String javaDoc = parts[0];
+        final String code = parts[1];
+        Item item = Item.builder().importBody(importBody).type(JavaItemType.CLASS).name(parent.getName() + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).parent(parent).body(code).build();
+        items.add(item);
+        //System.out.println(item);
+    }
+
+    /**
+     * Visits a field.
+     *
+     * @param parent the parent item
+     * @param field  the field
+     */
+    private void visitField(Item parent, FieldDeclaration field) {
+        final String[] parts = extractJavaDoc(field.toString());
+        final String javaDoc = parts[0];
+        final String code = parts[1];
+        Item item = Item.builder().type(JavaItemType.FIELD).name(parent.getName() + ""."" + fieldName(field)).simpleName(fieldName(field)).definition(code).javadoc(javaDoc).parent(parent).build();
+        items.add(item);
+        //System.out.println(item);
+    }
+
+    /**
+     * Visits a method.
+     *
+     * @param parent the parent item
+     * @param method the method
+     */
+    public void visitMethod(Item parent, final MethodDeclaration method) {
+        String[] parts = extractJavaDoc(getBodyDefinition(method, 500));
+        final String javaDoc = parts[0];
+        final String code = parts[1];
+        Item item = Item.builder().type(JavaItemType.METHOD).name(parent.getName() + ""."" + method.getName()).simpleName(method.getName().toString()).definition(getSmallDefinition(code)).javadoc(javaDoc).parent(parent).body(code).build();
+        items.add(item);
+        //System.out.println(item);
+    }
+
+    @Override
+    public void visit(EnumDeclaration n, Void arg) {
+        visitEnum(compilationUnit.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse(""""), compilationUnit.getImports().stream().map(Node::toString).collect(Collectors.joining(""\n"")), n);
+        super.visit(n, arg);
+    }
+
+    /**
+     * Visits an enum.
+     *
+     * @param packageName the package name
+     * @param importBody  the import statements
+     * @param enumD       the enum
+     */
+    private void visitEnum(String packageName, String importBody, EnumDeclaration enumD) {
+        String[] parts = extractJavaDoc(getBodyDefinition(enumD, 200));
+        final String javaDoc = parts[0];
+        final String code = parts[1];
+        Item item = Item.builder().importBody(importBody).type(JavaItemType.ENUM).name(packageName + ""."" + enumD.getNameAsString()).simpleName(enumD.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
+        items.add(item);
+        //System.out.println(item);
+        enumD.getMethods().forEach(method -> visitMethod(item, method));
+        enumD.getFields().forEach(field -> visitField(item, field));
+    }
+}"
 "fieldName","method","com.cloudurable.java2csv.Java2CSV.fieldName","private static String fieldName(FieldDeclaration field) { /* the rest ... */ }","/**
  * Extracts the field name from a FieldDeclaration.
  *
@@ -339,7 +515,6 @@ import java.util.stream.Stream;
  * @param items the list of items to add to
  */
 ","com.cloudurable.java2csv.Java2CSV","","private static void parseFile(File file, List<Item> items) {
-    System.out.println(file);
     try {
         CompilationUnit compilationUnit = StaticJavaParser.parse(file);
         compilationUnit.accept(new ClassVisitor(compilationUnit, items), null);
@@ -347,304 +522,6 @@ import java.util.stream.Stream;
         e.printStackTrace();
     }
 }"
-"ClassVisitor","class","com.cloudurable.java2csv.ClassVisitor","private static class ClassVisitor extends VoidVisitorAdapter<Void> { /* the rest ... */ }","/**
- * Visitor for visiting classes, interfaces, and enums.
- */
-","","import com.github.javaparser.StaticJavaParser;
-
-import com.github.javaparser.ast.CompilationUnit;
-
-import com.github.javaparser.ast.Node;
-
-import com.github.javaparser.ast.body.*;
-
-import com.github.javaparser.ast.nodeTypes.NodeWithName;
-
-import com.github.javaparser.ast.nodeTypes.NodeWithSimpleName;
-
-import com.github.javaparser.ast.type.ClassOrInterfaceType;
-
-import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
-
-import com.opencsv.CSVWriter;
-
-import java.io.File;
-
-import java.io.FileWriter;
-
-import java.io.IOException;
-
-import java.nio.file.Files;
-
-import java.nio.file.Path;
-
-import java.util.ArrayList;
-
-import java.util.List;
-
-import java.util.Optional;
-
-import java.util.regex.Matcher;
-
-import java.util.regex.Pattern;
-
-import java.util.stream.Collectors;
-
-import java.util.stream.Stream;
-","private static class ClassVisitor extends VoidVisitorAdapter<Void> {
-
-    static Pattern JAVA_DOC_REGEX = Pattern.compile(""^/\\*\\*.*?\\*/\\s*"", Pattern.DOTALL);
-
-    private final CompilationUnit compilationUnit;
-
-    private final List<Item> items;
-
-    public ClassVisitor(CompilationUnit compilationUnit, List<Item> items) {
-        this.compilationUnit = compilationUnit;
-        this.items = items;
-    }
-
-    /**
-     * Extracts the Javadoc comment and method code from the given code.
-     *
-     * @param code the input code
-     * @return an array containing the Javadoc comment and method code
-     */
-    public static String[] extractJavaDoc(String code) {
-        // Define the regular expression pattern to match Javadoc comments
-        Matcher matcher = JAVA_DOC_REGEX.matcher(code);
-        if (matcher.find()) {
-            // Extract the Javadoc comment
-            String javadoc = matcher.group();
-            // Extract the method code
-            String methodCode = code.substring(matcher.end());
-            return new String[] { javadoc, methodCode };
-        } else {
-            // No Javadoc found
-            return new String[] { """", code };
-        }
-    }
-
-    @Override
-    public void visit(ClassOrInterfaceDeclaration cls, Void arg) {
-        if (!cls.isInnerClass()) {
-            visitClass(compilationUnit.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse(""""), compilationUnit.getImports().stream().map(Node::toString).collect(Collectors.joining(""\n"")), cls);
-        }
-        super.visit(cls, arg);
-    }
-
-    /**
-     * Visits a class or interface.
-     *
-     * @param packageName the package name
-     * @param importBody  the import statements
-     * @param cls         the class or interface
-     */
-    public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) {
-        if (cls.getNameAsString().toString().equals(""Java2CSV"")) {
-            System.out.println("""");
-        }
-        final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
-        final String javaDoc = parts[0];
-        final String code = parts[1];
-        Item item = Item.builder().importBody(importBody).type(cls.isInterface() ? JavaItemType.INTERFACE : JavaItemType.CLASS).name(packageName + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
-        items.add(item);
-        System.out.println(item);
-        cls.getImplementedTypes().stream().filter(ClassOrInterfaceType::isClassOrInterfaceType).forEach(clsInner -> visitClassType(packageName, importBody, item, clsInner.asClassOrInterfaceType()));
-        cls.getMethods().forEach(method -> visitMethod(item, method));
-        cls.getFields().forEach(field -> visitField(item, field));
-    }
-
-    /**
-     * Visits a class or interface type.
-     *
-     * @param packageName the package name
-     * @param importBody  the import statements
-     * @param parent      the parent item
-     * @param cls         the class or interface type
-     */
-    private void visitClassType(String packageName, String importBody, Item parent, ClassOrInterfaceType cls) {
-        final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
-        final String javaDoc = parts[0];
-        final String code = parts[1];
-        Item item = Item.builder().importBody(importBody).type(JavaItemType.CLASS).name(parent.getName() + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).parent(parent).body(code).build();
-        items.add(item);
-        System.out.println(item);
-    }
-
-    /**
-     * Visits a field.
-     *
-     * @param parent the parent item
-     * @param field  the field
-     */
-    private void visitField(Item parent, FieldDeclaration field) {
-        final String[] parts = extractJavaDoc(field.toString());
-        final String javaDoc = parts[0];
-        final String code = parts[1];
-        Item item = Item.builder().type(JavaItemType.FIELD).name(parent.getName() + ""."" + fieldName(field)).simpleName(fieldName(field)).definition(code).javadoc(javaDoc).parent(parent).build();
-        items.add(item);
-        System.out.println(item);
-    }
-
-    /**
-     * Visits a method.
-     *
-     * @param parent the parent item
-     * @param method the method
-     */
-    public void visitMethod(Item parent, final MethodDeclaration method) {
-        String[] parts = extractJavaDoc(getBodyDefinition(method, 500));
-        final String javaDoc = parts[0];
-        final String code = parts[1];
-        Item item = Item.builder().type(JavaItemType.METHOD).name(parent.getName() + ""."" + method.getName()).simpleName(method.getName().toString()).definition(getSmallDefinition(code)).javadoc(javaDoc).parent(parent).body(code).build();
-        items.add(item);
-        System.out.println(item);
-    }
-
-    @Override
-    public void visit(EnumDeclaration n, Void arg) {
-        visitEnum(compilationUnit.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse(""""), compilationUnit.getImports().stream().map(Node::toString).collect(Collectors.joining(""\n"")), n);
-        super.visit(n, arg);
-    }
-
-    /**
-     * Visits an enum.
-     *
-     * @param packageName the package name
-     * @param importBody  the import statements
-     * @param enumD       the enum
-     */
-    private void visitEnum(String packageName, String importBody, EnumDeclaration enumD) {
-        String[] parts = extractJavaDoc(getBodyDefinition(enumD, 200));
-        final String javaDoc = parts[0];
-        final String code = parts[1];
-        Item item = Item.builder().importBody(importBody).type(JavaItemType.ENUM).name(packageName + ""."" + enumD.getNameAsString()).simpleName(enumD.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
-        items.add(item);
-        System.out.println(item);
-        enumD.getMethods().forEach(method -> visitMethod(item, method));
-        enumD.getFields().forEach(field -> visitField(item, field));
-    }
-}"
-"extractJavaDoc","method","com.cloudurable.java2csv.ClassVisitor.extractJavaDoc","public static String[] extractJavaDoc(String code) { /* the rest ... */ }","/**
- * Extracts the Javadoc comment and method code from the given code.
- *
- * @param code the input code
- * @return an array containing the Javadoc comment and method code
- */
-","com.cloudurable.java2csv.ClassVisitor","","public static String[] extractJavaDoc(String code) {
-    // Define the regular expression pattern to match Javadoc comments
-    Matcher matcher = JAVA_DOC_REGEX.matcher(code);
-    if (matcher.find()) {
-        // Extract the Javadoc comment
-        String javadoc = matcher.group();
-        // Extract the method code
-        String methodCode = code.substring(matcher.end());
-        return new String[] { javadoc, methodCode };
-    } else {
-        // No Javadoc found
-        return new String[] { """", code };
-    }
-}"
-"visit","method","com.cloudurable.java2csv.ClassVisitor.visit","@Override
-public void visit(ClassOrInterfaceDeclaration cls, Void arg) { /* the rest ... */ }","","com.cloudurable.java2csv.ClassVisitor","","@Override
-public void visit(ClassOrInterfaceDeclaration cls, Void arg) {
-    if (!cls.isInnerClass()) {
-        visitClass(compilationUnit.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse(""""), compilationUnit.getImports().stream().map(Node::toString).collect(Collectors.joining(""\n"")), cls);
-    }
-    super.visit(cls, arg);
-}"
-"visitClass","method","com.cloudurable.java2csv.ClassVisitor.visitClass","public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) { /* the rest ... */ }","/**
- * Visits a class or interface.
- *
- * @param packageName the package name
- * @param importBody  the import statements
- * @param cls         the class or interface
- */
-","com.cloudurable.java2csv.ClassVisitor","","public void visitClass(String packageName, String importBody, ClassOrInterfaceDeclaration cls) {
-    if (cls.getNameAsString().toString().equals(""Java2CSV"")) {
-        System.out.println("""");
-    }
-    final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
-    final String javaDoc = parts[0];
-    final String code = parts[1];
-    Item item = Item.builder().importBody(importBody).type(cls.isInterface() ? JavaItemType.INTERFACE : JavaItemType.CLASS).name(packageName + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
-    items.add(item);
-    System.out.println(item);
-    cls.getImplementedTypes().stream().filter(ClassOrInterfaceType::isClassOrInterfaceType).forEach(clsInner -> visitClassType(packageName, importBody, item, clsInner.asClassOrInterfaceType()));
-    cls.getMethods().forEach(method -> visitMethod(item, method));
-    cls.getFields().forEach(field -> visitField(item, field));
-}"
-"visitClassType","method","com.cloudurable.java2csv.ClassVisitor.visitClassType","private void visitClassType(String packageName, String importBody, Item parent, ClassOrInterfaceType cls) { /* the rest ... */ }","/**
- * Visits a class or interface type.
- *
- * @param packageName the package name
- * @param importBody  the import statements
- * @param parent      the parent item
- * @param cls         the class or interface type
- */
-","com.cloudurable.java2csv.ClassVisitor","","private void visitClassType(String packageName, String importBody, Item parent, ClassOrInterfaceType cls) {
-    final String[] parts = extractJavaDoc(getBodyDefinition(cls, 200));
-    final String javaDoc = parts[0];
-    final String code = parts[1];
-    Item item = Item.builder().importBody(importBody).type(JavaItemType.CLASS).name(parent.getName() + ""."" + cls.getNameAsString()).simpleName(cls.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).parent(parent).body(code).build();
-    items.add(item);
-    System.out.println(item);
-}"
-"visitField","method","com.cloudurable.java2csv.ClassVisitor.visitField","private void visitField(Item parent, FieldDeclaration field) { /* the rest ... */ }","/**
- * Visits a field.
- *
- * @param parent the parent item
- * @param field  the field
- */
-","com.cloudurable.java2csv.ClassVisitor","","private void visitField(Item parent, FieldDeclaration field) {
-    final String[] parts = extractJavaDoc(field.toString());
-    final String javaDoc = parts[0];
-    final String code = parts[1];
-    Item item = Item.builder().type(JavaItemType.FIELD).name(parent.getName() + ""."" + fieldName(field)).simpleName(fieldName(field)).definition(code).javadoc(javaDoc).parent(parent).build();
-    items.add(item);
-    System.out.println(item);
-}"
-"visitMethod","method","com.cloudurable.java2csv.ClassVisitor.visitMethod","public void visitMethod(Item parent, final MethodDeclaration method) { /* the rest ... */ }","/**
- * Visits a method.
- *
- * @param parent the parent item
- * @param method the method
- */
-","com.cloudurable.java2csv.ClassVisitor","","public void visitMethod(Item parent, final MethodDeclaration method) {
-    String[] parts = extractJavaDoc(getBodyDefinition(method, 500));
-    final String javaDoc = parts[0];
-    final String code = parts[1];
-    Item item = Item.builder().type(JavaItemType.METHOD).name(parent.getName() + ""."" + method.getName()).simpleName(method.getName().toString()).definition(getSmallDefinition(code)).javadoc(javaDoc).parent(parent).body(code).build();
-    items.add(item);
-    System.out.println(item);
-}"
-"visit","method","com.cloudurable.java2csv.ClassVisitor.visit","@Override
-public void visit(EnumDeclaration n, Void arg) { /* the rest ... */ }","","com.cloudurable.java2csv.ClassVisitor","","@Override
-public void visit(EnumDeclaration n, Void arg) {
-    visitEnum(compilationUnit.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse(""""), compilationUnit.getImports().stream().map(Node::toString).collect(Collectors.joining(""\n"")), n);
-    super.visit(n, arg);
-}"
-"visitEnum","method","com.cloudurable.java2csv.ClassVisitor.visitEnum","private void visitEnum(String packageName, String importBody, EnumDeclaration enumD) { /* the rest ... */ }","/**
- * Visits an enum.
- *
- * @param packageName the package name
- * @param importBody  the import statements
- * @param enumD       the enum
- */
-","com.cloudurable.java2csv.ClassVisitor","","private void visitEnum(String packageName, String importBody, EnumDeclaration enumD) {
-    String[] parts = extractJavaDoc(getBodyDefinition(enumD, 200));
-    final String javaDoc = parts[0];
-    final String code = parts[1];
-    Item item = Item.builder().importBody(importBody).type(JavaItemType.ENUM).name(packageName + ""."" + enumD.getNameAsString()).simpleName(enumD.getNameAsString()).definition(getSmallDefinition(code)).javadoc(javaDoc).body(code).build();
-    items.add(item);
-    System.out.println(item);
-    enumD.getMethods().forEach(method -> visitMethod(item, method));
-    enumD.getFields().forEach(field -> visitField(item, field));
-}"
-"JAVA_DOC_REGEX","field","com.cloudurable.java2csv.ClassVisitor.JAVA_DOC_REGEX","static Pattern JAVA_DOC_REGEX = Pattern.compile(""^/\\*\\*.*?\\*/\\s*"", Pattern.DOTALL);","","com.cloudurable.java2csv.ClassVisitor","",""
-"compilationUnit","field","com.cloudurable.java2csv.ClassVisitor.compilationUnit","private final CompilationUnit compilationUnit;","","com.cloudurable.java2csv.ClassVisitor","",""
-"items","field","com.cloudurable.java2csv.ClassVisitor.items","private final List<Item> items;","","com.cloudurable.java2csv.ClassVisitor","",""
 "JavaItemType","enum","com.cloudurable.java2csv.JavaItemType","public enum JavaItemType { /* the rest ... */ }","/**
  * Enum representing different types of Java items, such as classes, interfaces, enums, methods, and fields.
  */
@@ -864,6 +741,80 @@ public void visit(EnumDeclaration n, Void arg) {
             return this;
         }
 "
+"Builder","class","com.cloudurable.java2csv.Item.Builder","public static class Builder { /* the rest ... */ }","/**
+ * Builder class for constructing an Item.
+ */
+","com.cloudurable.java2csv.Item","import java.util.List;
+","public static class Builder {
+
+    private String body;
+
+    private String javadoc;
+
+    private String name;
+
+    private String definition;
+
+    private Item parent;
+
+    private String importBody;
+
+    private String simpleName;
+
+    private JavaItemType type;
+
+    private Builder() {
+    }
+
+    public Builder simpleName(String simpleName) {
+        this.simpleName = simpleName;
+        return this;
+    }
+
+    public Builder type(JavaItemType type) {
+        this.type = type;
+        return this;
+    }
+
+    public Builder importBody(String importBody) {
+        this.importBody = importBody;
+        return this;
+    }
+
+    public Builder body(String body) {
+        this.body = body;
+        return this;
+    }
+
+    public Builder javadoc(String javadoc) {
+        this.javadoc = javadoc;
+        return this;
+    }
+
+    public Builder name(String name) {
+        this.name = name;
+        return this;
+    }
+
+    public Builder definition(String definition) {
+        this.definition = definition;
+        return this;
+    }
+
+    public Builder parent(Item parent) {
+        this.parent = parent;
+        return this;
+    }
+
+    /**
+     * Builds and returns the Item.
+     *
+     * @return the constructed Item
+     */
+    public Item build() {
+        return new Item(importBody, body, javadoc, name, simpleName, definition, parent, type);
+    }
+}"
 "headers","method","com.cloudurable.java2csv.Item.headers","public static List<String> headers() { /* the rest ... */ }","/**
  * Returns the column headers for the CSV representation of an Item.
  *
@@ -969,125 +920,3 @@ public String toString() {
 "definition","field","com.cloudurable.java2csv.Item.definition","private final String definition;","","com.cloudurable.java2csv.Item","",""
 "parent","field","com.cloudurable.java2csv.Item.parent","private final Item parent;","","com.cloudurable.java2csv.Item","",""
 "type","field","com.cloudurable.java2csv.Item.type","private final JavaItemType type;","","com.cloudurable.java2csv.Item","",""
-"Builder","class","com.cloudurable.java2csv.Builder","public static class Builder { /* the rest ... */ }","/**
- * Builder class for constructing an Item.
- */
-","","import java.util.List;
-","public static class Builder {
-
-    private String body;
-
-    private String javadoc;
-
-    private String name;
-
-    private String definition;
-
-    private Item parent;
-
-    private String importBody;
-
-    private String simpleName;
-
-    private JavaItemType type;
-
-    private Builder() {
-    }
-
-    public Builder simpleName(String simpleName) {
-        this.simpleName = simpleName;
-        return this;
-    }
-
-    public Builder type(JavaItemType type) {
-        this.type = type;
-        return this;
-    }
-
-    public Builder importBody(String importBody) {
-        this.importBody = importBody;
-        return this;
-    }
-
-    public Builder body(String body) {
-        this.body = body;
-        return this;
-    }
-
-    public Builder javadoc(String javadoc) {
-        this.javadoc = javadoc;
-        return this;
-    }
-
-    public Builder name(String name) {
-        this.name = name;
-        return this;
-    }
-
-    public Builder definition(String definition) {
-        this.definition = definition;
-        return this;
-    }
-
-    public Builder parent(Item parent) {
-        this.parent = parent;
-        return this;
-    }
-
-    /**
-     * Builds and returns the Item.
-     *
-     * @return the constructed Item
-     */
-    public Item build() {
-        return new Item(importBody, body, javadoc, name, simpleName, definition, parent, type);
-    }
-}"
-"simpleName","method","com.cloudurable.java2csv.Builder.simpleName","public Builder simpleName(String simpleName) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder simpleName(String simpleName) {
-    this.simpleName = simpleName;
-    return this;
-}"
-"type","method","com.cloudurable.java2csv.Builder.type","public Builder type(JavaItemType type) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder type(JavaItemType type) {
-    this.type = type;
-    return this;
-}"
-"importBody","method","com.cloudurable.java2csv.Builder.importBody","public Builder importBody(String importBody) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder importBody(String importBody) {
-    this.importBody = importBody;
-    return this;
-}"
-"body","method","com.cloudurable.java2csv.Builder.body","public Builder body(String body) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder body(String body) {
-    this.body = body;
-    return this;
-}"
-"javadoc","method","com.cloudurable.java2csv.Builder.javadoc","public Builder javadoc(String javadoc) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder javadoc(String javadoc) {
-    this.javadoc = javadoc;
-    return this;
-}"
-"name","method","com.cloudurable.java2csv.Builder.name","public Builder name(String name) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder name(String name) {
-    this.name = name;
-    return this;
-}"
-"definition","method","com.cloudurable.java2csv.Builder.definition","public Builder definition(String definition) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder definition(String definition) {
-    this.definition = definition;
-    return this;
-}"
-"parent","method","com.cloudurable.java2csv.Builder.parent","public Builder parent(Item parent) { /* the rest ... */ }","","com.cloudurable.java2csv.Builder","","public Builder parent(Item parent) {
-    this.parent = parent;
-    return this;
-}"
-"build","method","com.cloudurable.java2csv.Builder.build","public Item build() { /* the rest ... */ }","/**
- * Builds and returns the Item.
- *
- * @return the constructed Item
- */
-","com.cloudurable.java2csv.Builder","","public Item build() {
-    return new Item(importBody, body, javadoc, name, simpleName, definition, parent, type);
-}"
-"body","field","com.cloudurable.java2csv.Builder.body","private String body;","","com.cloudurable.java2csv.Builder","",""
-"javadoc","field","com.cloudurable.java2csv.Builder.javadoc","private String javadoc;","","com.cloudurable.java2csv.Builder","",""
-"name","field","com.cloudurable.java2csv.Builder.name","private String name;","","com.cloudurable.java2csv.Builder","",""
-"definition","field","com.cloudurable.java2csv.Builder.definition","private String definition;","","com.cloudurable.java2csv.Builder","",""
-"parent","field","com.cloudurable.java2csv.Builder.parent","private Item parent;","","com.cloudurable.java2csv.Builder","",""
-"importBody","field","com.cloudurable.java2csv.Builder.importBody","private String importBody;","","com.cloudurable.java2csv.Builder","",""
-"simpleName","field","com.cloudurable.java2csv.Builder.simpleName","private String simpleName;","","com.cloudurable.java2csv.Builder","",""
-"type","field","com.cloudurable.java2csv.Builder.type","private JavaItemType type;","","com.cloudurable.java2csv.Builder","",""
