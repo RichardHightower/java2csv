@@ -353,10 +353,14 @@ public class Java2CSV {
             javaItems.stream()
                     .filter(javaItem -> javaItem.getType() == JavaItemType.CLASS || javaItem.getType() == JavaItemType.INTERFACE)
                     .filter(javaItem -> javaItem.getParent() == null)
-                    .filter(javaItem -> !javaItem.getName().endsWith("Test"))
+                    .filter(javaItem -> !javaItem.getSimpleName().endsWith("Test"))
+                    .filter(javaItem -> !javaItem.getSimpleName().endsWith("Tests"))
+                    .filter(javaItem -> !javaItem.getSimpleName().endsWith("TestBase"))
                     .forEach(
+
                             javaItem -> {
                                 String fullyQualifiedName = javaItem.getName();
+                                System.out.println(javaItem.getSimpleName());
                                 int lastDotIndex = fullyQualifiedName.lastIndexOf('.');
                                 String packageName = fullyQualifiedName.substring(0, lastDotIndex);
                                 List<String> classDefs = classNameByPackage.getOrDefault(packageName, new ArrayList<>());
@@ -409,10 +413,16 @@ public class Java2CSV {
                 javaItems.stream()
                         .filter(javaItem -> javaItem.getType() == JavaItemType.CLASS)
                         .filter(javaItem -> javaItem.getParent() == null)
-                        .filter(javaItem -> !javaItem.getName().endsWith("Test"))
+                        .filter(javaItem -> !javaItem.getSimpleName().startsWith("Test"))
+                        .filter(javaItem -> !javaItem.getSimpleName().endsWith("Test"))
+                        .filter(javaItem -> !javaItem.getSimpleName().endsWith("Mock"))
+                        .filter(javaItem -> !javaItem.getSimpleName().endsWith("Tests"))
+                        .filter(javaItem -> !javaItem.getSimpleName().endsWith("TestBase"))
                         .filter(javaItem -> (packageName + "." + javaItem.getSimpleName()).equals(javaItem.getName()))
                         .forEach(javaClass -> {
                                     markdownBuilder.append("## " + javaClass.getSimpleName()).append("\n");
+
+                                    markdownBuilder.append("\n**" + javaClass.getSimpleName()).append("**\n");
 
                                     try {
                                         String output = chat(String.format("As an software engineer writing docs create a short description of this class based on its DEFINITION and JAVADOC, " +
@@ -508,7 +518,7 @@ public class Java2CSV {
                                                                 "    end\n" +
                                                                 "    title Sequence diagram example\n" +
                                                                 "    B->A: A very long message that needs to be broken\n" +
-                                                        "\nAs an software engineer create a UML sequence diagram for this method %s for class %s \nBODY:\n %s \n", javaMethod.getName(), javaClass.getName(), javaMethod.getBody());
+                                                        "\nAs an software engineer create a UML sequence diagram for this method %s for class %s \nBODY:\n %s \n", javaMethod.getSimpleName(), javaClass.getName(), javaMethod.getBody());
 
                                                 try {
 
