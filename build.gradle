@@ -26,6 +26,7 @@ java {
 }
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
@@ -36,8 +37,7 @@ dependencies {
     testImplementation 'org.mockito:mockito-core:5.4.0'
     implementation 'com.github.javaparser:javaparser-core:3.25.3'
     implementation 'com.opencsv:opencsv:5.7.1'
-
-
+    implementation 'com.cloudurable:jai:1.0.2-SNAPSHOT'
 
 }
 

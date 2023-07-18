@@ -138,6 +138,10 @@ public class JavaItem {
         return type;
     }
 
+    public String getSimpleName() {
+        return simpleName;
+    }
+
     @Override
     public String toString() {
         return "Item{" +

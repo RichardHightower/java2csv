@@ -13,8 +13,11 @@ public class Main {
         try {
             final String directoryPath = args.length > 0 ? args[0] : ".";
             final String outputFile = args.length > 1 ? args[1] : "output.csv";
+            //Java2CSV.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
+            //        .run();
             Java2CSV.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
-                    .run();
+                    .extractClasses();
+
         } catch (Exception ex) {
             ex.printStackTrace();
         }
