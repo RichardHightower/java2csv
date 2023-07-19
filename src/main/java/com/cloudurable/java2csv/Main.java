@@ -17,6 +17,8 @@ public class Main {
             //        .run();
             Java2CSV.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
                     .extractClasses();
+//                        Java2CSV.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
+//                                .genImageIfMissing();
 
         } catch (Exception ex) {
             ex.printStackTrace();
