@@ -1,4 +1,4 @@
-package com.cloudurable.java2csv;
+package com.cloudurable.docgen;
 
 import com.cloudurable.jai.OpenAIClient;
 import com.cloudurable.jai.model.text.completion.chat.ChatRequest;
@@ -21,7 +21,7 @@ import java.util.stream.Stream;
  * Class responsible for processing Java files from a directory and converting them into a CSV format.
  * This is done by using the Builder pattern to set the input directory path and output file name.
  */
-public class Java2CSV {
+public class DocGenerator {
 
 
     /**
@@ -39,7 +39,7 @@ public class Java2CSV {
      * @param directoryPath the path of the directory that contains the Java files to be converted.
      * @param outputFile    the name of the file where the conversion output will be stored.
      */
-    public Java2CSV(String directoryPath, String outputFile) {
+    public DocGenerator(String directoryPath, String outputFile) {
         this.inputDirectoryPath = directoryPath;
         this.outputFile = outputFile;
     }
@@ -80,8 +80,8 @@ public class Java2CSV {
     public static CompletableFuture<String> chat(String input, String system) {
 
 
-        System.out.println("INPUT\n" + input);
-        System.out.println("SYSTEM\n" + system);
+//        System.out.println("INPUT\n" + input);
+//        System.out.println("SYSTEM\n" + system);
 
         final var client = OpenAIClient.builder().setApiKey(System.getenv("OPENAI_API_KEY")).build();
 
@@ -93,7 +93,7 @@ public class Java2CSV {
         return client.chatAsync(chatRequest).thenApply(chat -> {
             if (chat.getResponse().isPresent()) {
                 String output = chat.getResponse().get().getChoices().get(0).getMessage().getContent();
-                System.out.println("OUTPUT\n" + output);
+                //System.out.println("OUTPUT\n" + output);
                 return output;
             } else {
                 System.out.println(chat.getStatusCode().orElse(666) + " " + chat.getStatusMessage().orElse(""));
@@ -371,7 +371,7 @@ public class Java2CSV {
 
                 createClassStream(javaItems, packageName)
                         .forEach(javaClass -> {
-                                    markdownBuilder.append("## " + javaClass.getSimpleName()).append("\n");
+                                    markdownBuilder.append("## Class: " + javaClass.getSimpleName()).append("\n");
 
                                     markdownBuilder.append("\n**" + javaClass.getName()).append("**\n");
 
@@ -389,8 +389,7 @@ public class Java2CSV {
 
                                     createMethodFilter(javaItems, javaClass)
                                             .forEach(javaMethod -> {
-                                                markdownBuilder.append("## " + javaMethod.getDefinition()).append("\n");
-                                                markdownBuilder.append("```java\n").append(javaMethod.getBody()).append("\n```");
+                                                methodCodeListingJava(markdownBuilder, javaMethod);
 
                                                 try {
                                                     String output = chat(String.format("As an software engineer writing docs create a brief description " +
@@ -505,47 +504,6 @@ public class Java2CSV {
                                                     e.printStackTrace();
                                                 }
 
-                                                try {
-                                                    String output = chat(String.format("As an software engineer writing docs list areas of improvements " +
-                                                                    "for this method %s which is defined in class %s is doing based on its BODY" +
-                                                                    "\nBODY:\n %s \n", javaMethod.getSimpleName(), javaClass.getName(), javaMethod.getBody()),
-                                                            "output should be in markdown format").get();
-
-                                                    if (output != null && !output.isBlank()) {
-                                                        markdownBuilder.append("\n").append("### ").append(javaMethod.getSimpleName()).append(" Possible Improvements  \n");
-                                                        markdownBuilder.append("\n").append(output).append("\n");
-                                                    }
-                                                } catch (Exception e) {
-                                                    e.printStackTrace();
-                                                }
-
-                                                try {
-                                                    String output = chat(String.format("As an software engineer writing docs list any bugs or issues you see " +
-                                                                    "for this method %s which is defined in class %s is doing based on its BODY" +
-                                                                    "\nBODY:\n %s \n", javaMethod.getSimpleName(), javaClass.getName(), javaMethod.getBody()),
-                                                            "output should be in markdown format").get();
-
-                                                    if (output != null && !output.isBlank()) {
-                                                        markdownBuilder.append("\n").append("### ").append(javaMethod.getSimpleName()).append(" Possible Bugs  \n");
-                                                        markdownBuilder.append("\n").append(output).append("\n");
-                                                    }
-                                                } catch (Exception e) {
-                                                    e.printStackTrace();
-                                                }
-
-                                                try {
-                                                    String output = chat(String.format("As an software engineer who is an expert of programming style and best practices " +
-                                                                    "list any issues you see you see  for this method %s which is defined in class %s is doing based on its BODY" +
-                                                                    "\nBODY:\n %s \n", javaMethod.getSimpleName(), javaClass.getName(), javaMethod.getBody()),
-                                                            "output should be in markdown format").get();
-
-                                                    if (output != null && !output.isBlank()) {
-                                                        markdownBuilder.append("\n").append("### ").append(javaMethod.getSimpleName()).append(" Code Quality  \n");
-                                                        markdownBuilder.append("\n").append(output).append("\n");
-                                                    }
-                                                } catch (Exception e) {
-                                                    e.printStackTrace();
-                                                }
 
                                             });
                                 }
@@ -565,6 +523,11 @@ public class Java2CSV {
             throw new IllegalStateException(String.format(
                     "Directory does not exist %s or is not a directory", dir));
         }
+    }
+
+    private static void methodCodeListingJava(StringBuilder markdownBuilder, JavaItem javaMethod) {
+        markdownBuilder.append("### Method: "). append(javaMethod.getSimpleName()).append("\n");
+        markdownBuilder.append("```java\n").append(javaMethod.getBody()).append("\n```\n");
     }
 
     private static Map<String, List<String>> mapPackageToClassDefs(List<JavaItem> javaItems) {
@@ -617,6 +580,17 @@ public class Java2CSV {
         Files.write(new File(outputDir, "all.md").toPath(), all.getBytes(StandardCharsets.UTF_8));
     }
 
+    private static void generateJavaDocAll(File outputDir) throws IOException {
+        String all = Arrays.stream(outputDir.listFiles((dir1, name) -> name.endsWith(".md"))).map(file -> {
+            try {
+                return Files.readString(file.toPath()) + "\n";
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }).collect(Collectors.joining());
+
+        Files.write(new File(outputDir, "all-javadoc.md").toPath(), all.getBytes(StandardCharsets.UTF_8));
+    }
 
     public void generateMissingJavaDoc() throws IOException {
 
@@ -626,6 +600,7 @@ public class Java2CSV {
         File dir = new File(inputDirectoryPath).getCanonicalFile();
         if (dir.exists() && dir.isDirectory()) {
 
+            generateJavaDocAll(outputDir);
 
             List<JavaItem> javaItems = scanDirectory(dir);
 
@@ -836,6 +811,111 @@ public class Java2CSV {
         }
     }
 
+    public void provideImprovements() throws Exception{
+
+        File outputDir = new File(new File(outputFile).getParentFile(), "improve");
+        outputDir.mkdirs();
+
+        File dir = new File(inputDirectoryPath).getCanonicalFile();
+        if (dir.exists() && dir.isDirectory()) {
+
+            generateAll(outputDir);
+
+            List<JavaItem> javaItems = scanDirectory(dir);
+
+            Map<String, List<String>> classNameByPackage = mapPackageToClassDefs(javaItems);
+
+            classNameByPackage.entrySet().stream().forEach(entry -> {
+                final String packageName = entry.getKey();
+                final String markdownForPackage = packageName.replace(".", "_") + "-improve.md";
+                File markdownFileForPackage = new File(outputDir, markdownForPackage);
+                if (markdownFileForPackage.exists()) {
+                    return;
+                }
+
+                final StringBuilder markdownBuilder = new StringBuilder();
+                markdownBuilder.append("# Package ").append(packageName).append("\n");
+
+                createClassStream(javaItems, packageName)
+                        .forEach(javaClass -> {
+                                    markdownBuilder.append("## Class ").append(javaClass.getSimpleName()).append("\n");
+                                    createMethodFilter(javaItems, javaClass)
+                                            .forEach(javaMethod -> {
+                                                methodCodeListingJava(markdownBuilder, javaMethod);
+                                                final StringBuilder methodMarkdownBuilder = new StringBuilder();
+                                                generateMarkdownContentForMethod("Improvements","As an software engineer writing docs list areas of improvements",  methodMarkdownBuilder, javaClass, javaMethod);
+                                                generateMarkdownContentForMethod("Bugs","As an software engineer writing docs list any bugs or issues you see",  methodMarkdownBuilder, javaClass, javaMethod);
+                                                generateMarkdownContentForMethod("Coding Style","As an software engineer who is an expert of programming style and best " +
+                                                        "practices list any issues you see you see",  methodMarkdownBuilder, javaClass, javaMethod);
+
+                                                try {
+                                                    final var output = chat("Summarize these into a single list with one header level 2 called improvements: " + methodMarkdownBuilder, "output should be markdown").get();
+                                                    if (output == null || output.isBlank()) {
+                                                        markdownBuilder.append(methodMarkdownBuilder);
+                                                    } else {
+                                                        System.out.println(output);
+                                                        markdownBuilder.append(output);
+                                                    }
+                                                } catch (Exception e) {
+                                                    markdownBuilder.append(methodMarkdownBuilder);
+                                                }
+
+
+                                            });
+                                }
+                        );
+
+                try {
+                    Files.write(markdownFileForPackage.toPath(), markdownBuilder.toString().getBytes(StandardCharsets.UTF_8));
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+            });
+
+
+        } else {
+            throw new IllegalStateException(String.format(
+                    "Directory does not exist %s or is not a directory", dir));
+        }
+    }
+
+    private static boolean isBlank(String str) {
+        return str == null || str.isBlank();
+    }
+    private static void generateMarkdownContentForMethod(String title, String direction, StringBuilder markdownBuilder, JavaItem javaClass, JavaItem javaMethod) {
+        generateContentForMethod(title, direction, markdownBuilder, javaClass, javaMethod, "markdown");
+    }
+    private static void generateContentForMethod(String title, String direction, StringBuilder markdownBuilder, JavaItem javaClass, JavaItem javaMethod,  String outputFormat) {
+        try {
+            String output = "";
+            for (int i = 0; i < 3; i++) {
+                try {
+                    output = chat(String.format("%s " +
+                                            "for this method %s which is defined in class %s is doing based on its BODY" +
+                                            "\nBODY:\n %s \n JAVADOC FOR CLASS: \n %s \n", direction, javaMethod.getSimpleName(),
+                                    javaClass.getName(), javaMethod.getBody(), javaClass.getJavadoc()),
+                            String.format("output should be in %s format", outputFormat)).get();
+
+                    if (!isBlank(output)) {
+                        break;
+                    }
+                } catch (Exception ex) {
+                    //continue;
+
+                }
+
+            }
+            if (!isBlank(output)) {
+                markdownBuilder.append("\n").append("### ").append(javaMethod.getSimpleName()).append(" ").append(title).append("\n");
+                markdownBuilder.append("\n").append(output).append("\n");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     public static class Result {
         private final int result;
         private final String output;
@@ -897,8 +977,8 @@ public class Java2CSV {
          *
          * @return a new Java2CSV instance.
          */
-        public Java2CSV build() {
-            return new Java2CSV(this.inputDirectoryPath, this.outputFile);
+        public DocGenerator build() {
+            return new DocGenerator(this.inputDirectoryPath, this.outputFile);
         }
     }
 

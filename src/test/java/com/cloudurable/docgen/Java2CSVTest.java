@@ -1,15 +1,13 @@
-package com.cloudurable.java2csv;
+package com.cloudurable.docgen;
 
 import org.junit.jupiter.api.Test;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 class Java2CSVTest {
 
     @Test
     void extractSequenceDiagram() {
 
-        String str = Java2CSV.extractSequenceDiagram("asdafasdf\n" +
+        String str = DocGenerator.extractSequenceDiagram("asdafasdf\n" +
                 "asdafasdf\n" +
                 "\n" +
                 "sequenceDiagram\n" +
