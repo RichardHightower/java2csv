@@ -1,6 +1,5 @@
 package com.cloudurable.java2csv;
 
-import java.io.IOException;
 
 public class Main {
 
@@ -16,12 +15,15 @@ public class Main {
             //Java2CSV.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
             //        .run();
             Java2CSV.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
+                                .genImageIfMissing();
+            Java2CSV.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
                     .extractClasses();
-//                        Java2CSV.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
-//                                .genImageIfMissing();
+            Java2CSV.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
+                    .generateMissingJavaDoc();
 
         } catch (Exception ex) {
             ex.printStackTrace();
         }
     }
+
 }

@@ -13,7 +13,6 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -167,8 +166,8 @@ public class Java2CSV {
         }
     }
 
-    private static void getGenerateUMLClassDiagram(File mermaid, File images,
-                                                   String packageName, List<String> classDefs, StringBuilder markdownBuilder) throws Exception {
+    private static void getGenerateUMLClassDiagramForPackage(File mermaid, File images,
+                                                             String packageName, List<String> classDefs, StringBuilder markdownBuilder) throws Exception {
 
         final String mermaidInstructions = "Only put mermaid output in the output. Do not put any explanation. Just the mermaid output. The output is only mermaid markup. Do not add any non mermaid output. Do not add extends to the class defintion, but only the association. " +
                 "\nYou are a software engineer writing up documentation for a project. " +
@@ -338,52 +337,11 @@ public class Java2CSV {
         if (dir.exists() && dir.isDirectory()) {
 
 
-            String all = Arrays.stream(outputDir.listFiles((dir1, name) -> name.endsWith(".md"))).map(file -> {
-                try {
-                    return Files.readString(file.toPath()) + "\n";
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }).collect(Collectors.joining());
-
-            Files.write(new File(outputDir, "all.md").toPath(), all.getBytes(StandardCharsets.UTF_8));
+            generateAll(outputDir);
 
             List<JavaItem> javaItems = scanDirectory(dir);
 
-            Map<String, List<String>> classNameByPackage = new HashMap<>();
-            javaItems.stream()
-                    .filter(javaItem -> javaItem.getType() == JavaItemType.CLASS || javaItem.getType() == JavaItemType.INTERFACE)
-                    .filter(javaItem -> javaItem.getParent() == null)
-                    .filter(javaItem -> !javaItem.getSimpleName().endsWith("Test"))
-                    .filter(javaItem -> !javaItem.getSimpleName().endsWith("Tests"))
-                    .filter(javaItem -> !javaItem.getSimpleName().endsWith("TestBase"))
-                    .forEach(
-
-                            javaItem -> {
-                                String fullyQualifiedName = javaItem.getName();
-                                System.out.println(javaItem.getSimpleName());
-                                int lastDotIndex = fullyQualifiedName.lastIndexOf('.');
-                                String packageName = fullyQualifiedName.substring(0, lastDotIndex);
-                                List<String> classDefs = classNameByPackage.getOrDefault(packageName, new ArrayList<>());
-
-                                classDefs.add(javaItem.getDefinition() + "\n\t"
-
-                                        + String.join("\n\t", javaItems.stream().filter(field -> field.getType() == JavaItemType.FIELD)
-                                        .filter(field -> field.getParent() == javaItem)
-
-                                        .map(field -> {
-                                            String definition = field.getDefinition();
-                                            int index = definition.indexOf('=');
-                                            if (index == -1) {
-                                                return definition;
-                                            } else {
-                                                return definition.substring(0, index);
-                                            }
-                                        }).collect(Collectors.toList()).toArray(new String[0])));
-
-                                classNameByPackage.put(packageName, classDefs);
-                            }
-                    );
+            Map<String, List<String>> classNameByPackage = mapPackageToClassDefs(javaItems);
 
             classNameByPackage.entrySet().stream().forEach(entry -> {
                 final String packageName = entry.getKey();
@@ -405,21 +363,13 @@ public class Java2CSV {
                 markdownBuilder.append("# " + packageName + "\n");
 
                 try {
-                    getGenerateUMLClassDiagram(mermaid, images, packageName, classDefs, markdownBuilder);
+                    getGenerateUMLClassDiagramForPackage(mermaid, images, packageName, classDefs, markdownBuilder);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
 
 
-                javaItems.stream()
-                        .filter(javaItem -> javaItem.getType() == JavaItemType.CLASS)
-                        .filter(javaItem -> javaItem.getParent() == null)
-                        .filter(javaItem -> !javaItem.getSimpleName().startsWith("Test"))
-                        .filter(javaItem -> !javaItem.getSimpleName().endsWith("Test"))
-                        .filter(javaItem -> !javaItem.getSimpleName().endsWith("Mock"))
-                        .filter(javaItem -> !javaItem.getSimpleName().endsWith("Tests"))
-                        .filter(javaItem -> !javaItem.getSimpleName().endsWith("TestBase"))
-                        .filter(javaItem -> (packageName + "." + javaItem.getSimpleName()).equals(javaItem.getName()))
+                createClassStream(javaItems, packageName)
                         .forEach(javaClass -> {
                                     markdownBuilder.append("## " + javaClass.getSimpleName()).append("\n");
 
@@ -437,21 +387,7 @@ public class Java2CSV {
                                         e.printStackTrace();
                                     }
 
-                                    javaItems.stream()
-                                            .filter(javaItem -> javaItem.getType() == JavaItemType.METHOD)
-                                            .filter(javaMethod -> javaMethod.getParent().equals(javaClass))
-                                            .filter(javaMethod -> {
-                                                 if (javaMethod.getDefinition().contains("public static")) {
-                                                     return true;
-                                                 }
-                                                 return !javaMethod.getSimpleName().startsWith("get");
-                                            })
-                                            .filter(javaMethod -> !javaMethod.getSimpleName().startsWith("set"))
-                                            .filter(javaMethod -> !javaMethod.getSimpleName().equals("toString"))
-                                            .filter(javaMethod -> !javaMethod.getSimpleName().equals("hashCode"))
-                                            .filter(javaMethod -> !javaMethod.getSimpleName().equals("equals"))
-                                            .filter(javaMethod -> !javaMethod.getSimpleName().equals("builder"))
-                                            .filter(javaMethod -> javaMethod.getBody().lines().count() > 5)
+                                    createMethodFilter(javaItems, javaClass)
                                             .forEach(javaMethod -> {
                                                 markdownBuilder.append("## " + javaMethod.getDefinition()).append("\n");
                                                 markdownBuilder.append("```java\n").append(javaMethod.getBody()).append("\n```");
@@ -631,6 +567,205 @@ public class Java2CSV {
         }
     }
 
+    private static Map<String, List<String>> mapPackageToClassDefs(List<JavaItem> javaItems) {
+        Map<String, List<String>> classNameByPackage = new HashMap<>();
+        javaItems.stream()
+                .filter(javaItem -> javaItem.getType() == JavaItemType.CLASS || javaItem.getType() == JavaItemType.INTERFACE)
+                .filter(javaItem -> javaItem.getParent() == null)
+                .filter(javaItem -> !javaItem.getSimpleName().endsWith("Test"))
+                .filter(javaItem -> !javaItem.getSimpleName().endsWith("Tests"))
+                .filter(javaItem -> !javaItem.getSimpleName().endsWith("TestBase"))
+                .forEach(
+
+                        javaItem -> {
+                            String fullyQualifiedName = javaItem.getName();
+                            System.out.println(javaItem.getSimpleName());
+                            int lastDotIndex = fullyQualifiedName.lastIndexOf('.');
+                            String packageName = fullyQualifiedName.substring(0, lastDotIndex);
+                            List<String> classDefs = classNameByPackage.getOrDefault(packageName, new ArrayList<>());
+
+                            classDefs.add(javaItem.getDefinition() + "\n\t"
+
+                                    + String.join("\n\t", javaItems.stream().filter(field -> field.getType() == JavaItemType.FIELD)
+                                    .filter(field -> field.getParent() == javaItem)
+
+                                    .map(field -> {
+                                        String definition = field.getDefinition();
+                                        int index = definition.indexOf('=');
+                                        if (index == -1) {
+                                            return definition;
+                                        } else {
+                                            return definition.substring(0, index);
+                                        }
+                                    }).collect(Collectors.toList()).toArray(new String[0])));
+
+                            classNameByPackage.put(packageName, classDefs);
+                        }
+                );
+        return classNameByPackage;
+    }
+
+    private static void generateAll(File outputDir) throws IOException {
+        String all = Arrays.stream(outputDir.listFiles((dir1, name) -> name.endsWith(".md"))).map(file -> {
+            try {
+                return Files.readString(file.toPath()) + "\n";
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }).collect(Collectors.joining());
+
+        Files.write(new File(outputDir, "all.md").toPath(), all.getBytes(StandardCharsets.UTF_8));
+    }
+
+
+    public void generateMissingJavaDoc() throws IOException {
+
+        File outputDir = new File(new File(outputFile).getParentFile(), "javadoc");
+        outputDir.mkdirs();
+
+        File dir = new File(inputDirectoryPath).getCanonicalFile();
+        if (dir.exists() && dir.isDirectory()) {
+
+
+            List<JavaItem> javaItems = scanDirectory(dir);
+
+            Map<String, List<String>> classNameByPackage = mapPackageToClassDefs(javaItems);
+
+            classNameByPackage.entrySet().stream().forEach(entry -> {
+                final String packageName = entry.getKey();
+                final String markdownForPackage = packageName.replace(".", "_") + "-javadoc.md";
+                File markdownFileForPackage = new File(outputDir, markdownForPackage);
+                if (markdownFileForPackage.exists()) {
+                    return;
+                }
+
+                final StringBuilder markdownBuilder = new StringBuilder();
+                markdownBuilder.append("# ").append(packageName).append("\n");
+
+                createClassStream(javaItems, packageName)
+                        .forEach(javaClass -> {
+                                    var classJavadocTmp = javaClass.getJavadoc();
+                                    if (classJavadocTmp == null || classJavadocTmp.isBlank()) {
+                                        classJavadocTmp = generateJavaDocForClass(javaItems, markdownBuilder, javaClass, classJavadocTmp);
+                                    }
+                                    final var classJavaDoc = classJavadocTmp;
+                                    createMethodFilter(javaItems, javaClass)
+                                            .forEach(javaMethod -> {
+                                                generateMethodJavaDoc(markdownBuilder, javaClass, classJavaDoc, javaMethod);
+                                            });
+                                }
+                        );
+
+                try {
+                    Files.write(markdownFileForPackage.toPath(), markdownBuilder.toString().getBytes(StandardCharsets.UTF_8));
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+            });
+
+
+        } else {
+            throw new IllegalStateException(String.format(
+                    "Directory does not exist %s or is not a directory", dir));
+        }
+    }
+
+    private static void generateMethodJavaDoc(StringBuilder markdownBuilder, JavaItem javaClass, String classJavaDoc, JavaItem javaMethod) {
+        if (javaMethod.getJavadoc() == null || javaMethod.getJavadoc().isBlank()) {
+            markdownBuilder.append("## METHOD JAVADOC " + javaMethod.getDefinition()).append("\n");
+
+            try {
+                String output = chat(String.format("As an software engineer add a Java Docs for this method  " +
+                                " method = %s (%s) which is defined in class %s is doing based on its BODY" +
+                                "\nBODY:\n %s \n CLASS JAVADOC: %s \n", javaMethod.getSimpleName(), javaMethod.getName(),
+                                javaClass.getName(), javaMethod.getBody(), classJavaDoc),
+                        "output should be in JavaDoc format").get();
+
+                if (output != null && !output.isBlank()) {
+                    markdownBuilder.append("\n").append("### ").append(javaMethod.getSimpleName()).append("\n\n");
+                    markdownBuilder.append("\n```java\n").append(output).append("\n```\n");
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static Stream<JavaItem> createClassStream(List<JavaItem> javaItems, String packageName) {
+        return javaItems.stream()
+                .filter(javaItem -> javaItem.getType() == JavaItemType.CLASS)
+                .filter(javaItem -> javaItem.getParent() == null)
+                .filter(javaItem -> !javaItem.getSimpleName().startsWith("Test"))
+                .filter(javaItem -> !javaItem.getSimpleName().endsWith("Test"))
+                .filter(javaItem -> !javaItem.getSimpleName().endsWith("Mock"))
+                .filter(javaItem -> !javaItem.getSimpleName().endsWith("Tests"))
+                .filter(javaItem -> !javaItem.getSimpleName().endsWith("TestBase"))
+                .filter(javaItem -> (packageName + "." + javaItem.getSimpleName()).equals(javaItem.getName()));
+    }
+
+    private static Stream<JavaItem> createMethodFilter(List<JavaItem> javaItems, JavaItem javaClass) {
+        return javaItems.stream()
+                .filter(javaItem -> javaItem.getType() == JavaItemType.METHOD)
+                .filter(javaMethod -> javaMethod.getParent().equals(javaClass))
+                .filter(javaMethod -> {
+                    if (javaMethod.getDefinition().contains("public static")) {
+                        return true;
+                    }
+                    return !javaMethod.getSimpleName().startsWith("get");
+                })
+                .filter(javaMethod -> !javaMethod.getSimpleName().startsWith("set"))
+                .filter(javaMethod -> !javaMethod.getSimpleName().equals("toString"))
+                .filter(javaMethod -> !javaMethod.getSimpleName().equals("hashCode"))
+                .filter(javaMethod -> !javaMethod.getSimpleName().equals("equals"))
+                .filter(javaMethod -> !javaMethod.getSimpleName().equals("builder"))
+                .filter(javaMethod -> javaMethod.getBody().lines().count() > 5);
+    }
+
+    private String generateJavaDocForClass(List<JavaItem> javaItems, StringBuilder markdownBuilder, JavaItem javaClass, String classJavadocTmp) {
+        final var methods = getJavaMethodsForClass(javaClass, javaItems);
+        final var fields = getFieldsForClass(javaClass, javaItems);
+        markdownBuilder.append("## CLASS JAVADOCS " + javaClass.getSimpleName()).append("\n\n");
+
+        markdownBuilder.append("\n**" + javaClass.getName()).append("**\n");
+        try {
+
+            final var directive = String.format("As an software engineer write the missing Java Docs for this class" +
+                    "\nDEFINITION:\n %s \n" +
+                    "\nMETHODS:\n%s\nFIELDS:\n%s", javaClass.getDefinition(), javaClass.getJavadoc(), methods, fields);
+
+            classJavadocTmp = chat(directive,
+                    "output should be in JavaDoc format").get();
+
+            markdownBuilder.append("\n\n```java\n").append(classJavadocTmp).append("\n```\n\n");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return classJavadocTmp;
+    }
+
+    private String getJavaMethodsForClass(JavaItem javaClass, List<JavaItem> javaItems) {
+        final var builder = new StringBuilder();
+        createMethodFilter(javaItems, javaClass)
+                .forEach(javaMethod -> {
+                    builder.append("\n").append(javaMethod.getDefinition()).append("\n");
+                });
+
+        return builder.toString();
+    }
+
+    private String getFieldsForClass(final JavaItem javaClass, final List<JavaItem> javaItems) {
+        final var builder = new StringBuilder();
+        javaItems.stream()
+                .filter(javaItem -> javaItem.getType() == JavaItemType.FIELD)
+                .filter(javaMethod -> javaMethod.getParent().equals(javaClass))
+                .forEach(javaMethod -> {
+                    builder.append("\n").append(javaMethod.getDefinition()).append("\n");
+                });
+
+        return builder.toString();
+    }
+
     public void run() throws IOException {
         File dir = new File(inputDirectoryPath).getCanonicalFile();
         if (dir.exists() && dir.isDirectory()) {
@@ -685,20 +820,20 @@ public class Java2CSV {
         File mermaidDir = new File(outputDir, "mermaid");
         File imagesDir = new File(outputDir, "images");
 
-        List<File> imageFiles = Arrays.stream(mermaidDir.listFiles((dir, name) -> name.endsWith(".mmd")))
-                .map(file -> new File(imagesDir, file.getName().replace(".mmd", ".png")))
-                .filter(imageFile -> !imageFile.exists())
-                .collect(Collectors.toList());
+        var files = mermaidDir.listFiles((dir, name) -> name.endsWith(".mmd"));
 
-        System.out.println("These images were missing! " + imageFiles.size());
-
-
-
-        imageFiles.forEach(imageFile -> {
-            System.out.println(imageFile);
-            File mermaidFile = new File(mermaidDir, imageFile.getName().replace(".png", ".mmd"));
-            runMmdc(mermaidFile, imageFile);
-        });
+        if (files != null) {
+            List<File> imageFiles = Arrays.stream(files)
+                    .map(file -> new File(imagesDir, file.getName().replace(".mmd", ".png")))
+                    .filter(imageFile -> !imageFile.exists())
+                    .collect(Collectors.toList());
+            System.out.println("These images were missing! " + imageFiles.size());
+            imageFiles.forEach(imageFile -> {
+                System.out.println(imageFile);
+                File mermaidFile = new File(mermaidDir, imageFile.getName().replace(".png", ".mmd"));
+                runMmdc(mermaidFile, imageFile);
+            });
+        }
     }
 
     public static class Result {

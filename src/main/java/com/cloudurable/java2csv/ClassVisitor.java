@@ -2,10 +2,14 @@ package com.cloudurable.java2csv;
 
 import com.github.javaparser.StaticJavaParser;
 import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.Node;
+import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.*;
+import com.github.javaparser.ast.expr.AnnotationExpr;
 import com.github.javaparser.ast.nodeTypes.NodeWithName;
 import com.github.javaparser.ast.nodeTypes.NodeWithSimpleName;
+import com.github.javaparser.ast.type.Type;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
 import java.io.File;
@@ -209,6 +213,18 @@ class ClassVisitor extends VoidVisitorAdapter<Void> {
      * @param method the method
      */
     public void visitMethod(JavaItem parent, final MethodDeclaration method) {
+
+
+        NodeList<Modifier> modifiers = method.getModifiers();
+
+        String mods = modifiers.stream().map(Node::toString).map(String::trim).collect(Collectors.joining(" "));
+        Type type = method.getType();
+        NodeList<Parameter> parameters = method.getParameters();
+        String params = parameters.stream().map(Node::toString).map(String::trim).collect(Collectors.joining(", "));
+
+        String definition = String.format("%s %s %s(%s)", mods, type, method.getName(), params);
+        NodeList<AnnotationExpr> annotations = method.getAnnotations();
+
         String[] parts = extractJavaDoc(getBodyDefinition(method, 500));
         final String javaDoc = parts[0];
         final String code = parts[1];
@@ -217,7 +233,7 @@ class ClassVisitor extends VoidVisitorAdapter<Void> {
                 .type(JavaItemType.METHOD)
                 .name(parent.getName() + "." + method.getName())
                 .simpleName(method.getName().toString())
-                .definition(getSmallDefinition(code))
+                .definition(definition)
                 .javadoc(javaDoc)
                 .parent(parent)
                 .body(code)
