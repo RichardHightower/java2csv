@@ -14,16 +14,17 @@ public class Main {
             final String outputFile = args.length > 1 ? args[1] : "output.csv";
             //Java2CSV.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
             //        .run();
+//            DocGenerator.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
+//                    .genBusinessRules();
             DocGenerator.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
                     .genImageIfMissing();
+//            DocGenerator.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
+//                    .getDesignDoc();
+//            DocGenerator.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
+//                    .genImprovements();
+//            DocGenerator.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
+//                    .generateMissingJavaDoc();
 
-            DocGenerator.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
-                    .provideImprovements();
-            DocGenerator.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
-                    .generateMissingJavaDoc();
-
-            DocGenerator.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
-                    .extractClasses();
         } catch (Exception ex) {
             ex.printStackTrace();
         }

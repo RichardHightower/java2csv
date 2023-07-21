@@ -23,6 +23,21 @@ import java.util.stream.Stream;
  */
 public class DocGenerator {
 
+    private static String PRODUCT_MANAGER ="software product manager:\n" +
+            "* Serves as the link between business, technology, and user experience.\n" +
+            "* Understands market demands and sets the product vision.\n" +
+            "* Defines product strategy based on the vision.\n" +
+            "* Creates and manages the product roadmap.\n" +
+            "* Prioritizes features based on customer needs, business priorities, and technical constraints.\n" +
+            "* Coordinates with development teams to ensure quality and adherence to requirements.\n" +
+            "* Plans and executes product launches in collaboration with marketing, sales, and customer support teams.\n" +
+            "* Monitors product performance and uses data for informed decision-making.\n" +
+            "* Manages communication with various stakeholders about the product strategy, roadmap, and progress.\n" +
+            "Importance:\n" +
+            "* Ensures optimal use of company resources by directing them towards the right products and features.\n" +
+            "* Delivers a product that provides customer value, leading to satisfaction, revenue growth, and market expansion.\n" +
+            "* Without a PM, a company might lack a clear product strategy, resulting in wasted resources, missed market opportunities, and a product that fails to meet user needs. ";
+
 
     /**
      * Path of the directory that contains the Java files to be converted.
@@ -80,8 +95,6 @@ public class DocGenerator {
     public static CompletableFuture<String> chat(String input, String system) {
 
 
-//        System.out.println("INPUT\n" + input);
-//        System.out.println("SYSTEM\n" + system);
 
         final var client = OpenAIClient.builder().setApiKey(System.getenv("OPENAI_API_KEY")).build();
 
@@ -93,11 +106,13 @@ public class DocGenerator {
         return client.chatAsync(chatRequest).thenApply(chat -> {
             if (chat.getResponse().isPresent()) {
                 String output = chat.getResponse().get().getChoices().get(0).getMessage().getContent();
-                //System.out.println("OUTPUT\n" + output);
                 return output;
             } else {
-                System.out.println(chat.getStatusCode().orElse(666) + " " + chat.getStatusMessage().orElse(""));
-                throw new IllegalStateException(chat.getStatusCode().orElse(666) + " " + chat.getStatusMessage().orElse(""));
+
+                String errorMessage = String.format("Error handling request input: %s\n system: %s\n status code %d \n status message %s ",
+                        input, system, chat.getStatusCode().orElse(666), chat.getStatusMessage().orElse(""));
+                System.err.println(errorMessage);
+                throw new IllegalStateException(errorMessage);
             }
         });
     }
@@ -328,7 +343,7 @@ public class DocGenerator {
 
     }
 
-    public void extractClasses() throws IOException {
+    public void getDesignDoc() throws IOException {
 
         File outputDir = new File(outputFile).getParentFile();
         outputDir.mkdirs();
@@ -800,18 +815,19 @@ public class DocGenerator {
         if (files != null) {
             List<File> imageFiles = Arrays.stream(files)
                     .map(file -> new File(imagesDir, file.getName().replace(".mmd", ".png")))
-                    .filter(imageFile -> !imageFile.exists())
                     .collect(Collectors.toList());
-            System.out.println("These images were missing! " + imageFiles.size());
             imageFiles.forEach(imageFile -> {
-                System.out.println(imageFile);
+
                 File mermaidFile = new File(mermaidDir, imageFile.getName().replace(".png", ".mmd"));
-                runMmdc(mermaidFile, imageFile);
+                if (mermaidFile.lastModified() > imageFile.lastModified()) {
+                    System.out.println("Regenerating " + imageFile);
+                    runMmdc(mermaidFile, imageFile);
+                }
             });
         }
     }
 
-    public void provideImprovements() throws Exception{
+    public void genImprovements() throws Exception{
 
         File outputDir = new File(new File(outputFile).getParentFile(), "improve");
         outputDir.mkdirs();
@@ -880,6 +896,60 @@ public class DocGenerator {
         }
     }
 
+
+    public void genBusinessRules() throws Exception{
+
+        File outputDir = new File(new File(outputFile).getParentFile(), "biz");
+        outputDir.mkdirs();
+
+        File dir = new File(inputDirectoryPath).getCanonicalFile();
+        if (dir.exists() && dir.isDirectory()) {
+
+            generateAll(outputDir);
+
+            List<JavaItem> javaItems = scanDirectory(dir);
+
+            Map<String, List<String>> classNameByPackage = mapPackageToClassDefs(javaItems);
+
+            classNameByPackage.entrySet().stream().forEach(entry -> {
+                final String packageName = entry.getKey();
+                final String markdownForPackage = packageName.replace(".", "_") + "-biz.md";
+                File markdownFileForPackage = new File(outputDir, markdownForPackage);
+                if (markdownFileForPackage.exists()) {
+                    return;
+                }
+
+                final StringBuilder markdownBuilder = new StringBuilder();
+                markdownBuilder.append("# Package ").append(packageName).append("\n");
+
+                createClassStream(javaItems, packageName)
+                        .forEach(javaClass -> {
+                                    markdownBuilder.append("## Class ").append(javaClass.getSimpleName()).append("\n");
+                                    createMethodFilter(javaItems, javaClass)
+                                            .forEach(javaMethod -> {
+                                                methodCodeListingJava(markdownBuilder, javaMethod);
+                                                //generateMarkdownContentForMethod("Business Rules",PRODUCT_MANAGER + "As an product manager writing docs listing any business rules if found in a table " +
+                                                //        "with headers business rule and another header description",  markdownBuilder, javaClass, javaMethod);
+                                                generateMarkdownContentForMethod("Concepts",PRODUCT_MANAGER + "As an product manager writing docs list any business concepts or domain objects found in this code",  markdownBuilder, javaClass, javaMethod);
+                                            });
+                                }
+                        );
+
+                try {
+                    Files.write(markdownFileForPackage.toPath(), markdownBuilder.toString().getBytes(StandardCharsets.UTF_8));
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+
+            });
+
+
+        } else {
+            throw new IllegalStateException(String.format(
+                    "Directory does not exist %s or is not a directory", dir));
+        }
+    }
+
     private static boolean isBlank(String str) {
         return str == null || str.isBlank();
     }
@@ -891,18 +961,20 @@ public class DocGenerator {
             String output = "";
             for (int i = 0; i < 3; i++) {
                 try {
-                    output = chat(String.format("%s " +
-                                            "for this method %s which is defined in class %s is doing based on its BODY" +
-                                            "\nBODY:\n %s \n JAVADOC FOR CLASS: \n %s \n", direction, javaMethod.getSimpleName(),
-                                    javaClass.getName(), javaMethod.getBody(), javaClass.getJavadoc()),
-                            String.format("output should be in %s format", outputFormat)).get();
+
+                    final var user = String.format("%s " +
+                                    "for this method %s which is defined in class %s is doing based on its BODY" +
+                                    "\nBODY:\n %s \n JAVADOC FOR CLASS: \n %s \n", direction, javaMethod.getSimpleName(),
+                            javaClass.getName(), javaMethod.getBody(), javaClass.getJavadoc());
+
+                    final var  system = String.format("output should be in %s format", outputFormat);
+                    output = chat(user, system).get();
 
                     if (!isBlank(output)) {
                         break;
                     }
                 } catch (Exception ex) {
                     //continue;
-
                 }
 
             }
