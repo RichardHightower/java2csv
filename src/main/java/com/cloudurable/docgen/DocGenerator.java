@@ -1,7 +1,10 @@
 package com.cloudurable.docgen;
 
+import com.cloudurable.docgen.extract.FileUtils;
 import com.cloudurable.jai.OpenAIClient;
+import com.cloudurable.jai.model.ClientResponse;
 import com.cloudurable.jai.model.text.completion.chat.ChatRequest;
+import com.cloudurable.jai.model.text.completion.chat.ChatResponse;
 import com.cloudurable.jai.model.text.completion.chat.Message;
 import com.cloudurable.jai.model.text.completion.chat.Role;
 import com.opencsv.CSVWriter;
@@ -47,16 +50,23 @@ public class DocGenerator {
      * Name of the file where the output of the conversion will be stored.
      */
     private final String outputFile;
+    private final boolean inlineMermaid;
+    private final boolean useExistingMermaidIfFound;
 
     /**
      * Constructs a Java2CSV object with the specified directory path and output file.
      *
-     * @param directoryPath the path of the directory that contains the Java files to be converted.
-     * @param outputFile    the name of the file where the conversion output will be stored.
+     * @param directoryPath             the path of the directory that contains the Java files to be converted.
+     * @param outputFile                the name of the file where the conversion output will be stored.
+     * @param inlineMermaid
+     * @param useExistingMermaidIfFound
      */
-    public DocGenerator(String directoryPath, String outputFile) {
+    public DocGenerator(String directoryPath, String outputFile, boolean inlineMermaid,
+                        boolean useExistingMermaidIfFound) {
         this.inputDirectoryPath = directoryPath;
         this.outputFile = outputFile;
+        this.inlineMermaid = inlineMermaid;
+        this.useExistingMermaidIfFound = useExistingMermaidIfFound;
     }
 
     /**
@@ -92,29 +102,38 @@ public class DocGenerator {
 
         return extractedCode.toString().trim();
     }
-    public static CompletableFuture<String> chat(String input, String system) {
+    public static String chat(String input, String system) {
 
 
+        System.out.println(input);
 
-        final var client = OpenAIClient.builder().setApiKey(System.getenv("OPENAI_API_KEY")).build();
+        final var client = OpenAIClient.builder().validateJson(true).setApiKey(System.getenv("OPENAI_API_KEY")).build();
 
         final var chatRequest = ChatRequest.builder().addMessage(Message.builder().role(Role.SYSTEM).content(
                         system.replace("\n", "\\n").replace("\t", "\\t"))
                 .build()).addMessage(Message.builder().role(Role.USER).content(
                 input.replace("\n", "\\n").replace("\t", "\\t")).build()).build();
 
-        return client.chatAsync(chatRequest).thenApply(chat -> {
-            if (chat.getResponse().isPresent()) {
-                String output = chat.getResponse().get().getChoices().get(0).getMessage().getContent();
-                return output;
-            } else {
+        ClientResponse<ChatRequest, ChatResponse> chat = client.chat(chatRequest);
+        if (chat.getStatusCode().orElse(666) == 503) {
+            for (int i = 0; i < 10; i++ ) {
+                try {
+                    Thread.sleep(1000);
+                    System.out.println("System was busy sleeping " + System.currentTimeMillis());
+                } catch (InterruptedException e) {
 
+                }
+            }
+            return chat(input, system);
+        } else if (chat.getStatusCode().orElse(666) >= 200 && chat.getStatusCode().orElse(666)  <= 299) {
+            return chat.getResponse().get().getChoices().get(0).getMessage().getContent();
+        } else {
                 String errorMessage = String.format("Error handling request input: %s\n system: %s\n status code %d \n status message %s ",
                         input, system, chat.getStatusCode().orElse(666), chat.getStatusMessage().orElse(""));
                 System.err.println(errorMessage);
-                throw new IllegalStateException(errorMessage);
-            }
-        });
+                return "";
+        }
+
     }
 
     public static Result runMmdc(File input, File output) {
@@ -181,7 +200,7 @@ public class DocGenerator {
         }
     }
 
-    private static void getGenerateUMLClassDiagramForPackage(File mermaid, File images,
+    private  void getGenerateUMLClassDiagramForPackage(File mermaid, File images,
                                                              String packageName, List<String> classDefs, StringBuilder markdownBuilder) throws Exception {
 
         final String mermaidInstructions = "Only put mermaid output in the output. Do not put any explanation. Just the mermaid output. The output is only mermaid markup. Do not add any non mermaid output. Do not add extends to the class defintion, but only the association. " +
@@ -307,6 +326,18 @@ public class DocGenerator {
         File pngFile = new File(images, imageForPackage);
 
 
+        if (useExistingMermaidIfFound) {
+            if (pngFile.lastModified() < mermaidFile.lastModified()) {
+                String mContent =  FileUtils.readFile(mermaidFile);
+                if (!this.inlineMermaid) {
+                    markdownBuilder.append("\n![class diagram](./images/" + imageForPackage + ")\n\n");
+                } else {
+                    markdownBuilder.append("\n```mermaid\n").append(mContent).append("\n```\n");
+                }
+                return;
+            }
+        }
+
         String error = "";
         String mermaidContent = "";
         String classDefsStr = String.join("\n", classDefs.toArray(new String[0]));
@@ -318,7 +349,7 @@ public class DocGenerator {
 
 
             try {
-                mermaidContent = chat(message, mermaidInstructions).get();
+                mermaidContent = chat(message, mermaidInstructions);
                 mermaidContent = mermaidContent.replace("interface ", "class ");
                 mermaidContent = mermaidContent.replace("abstract class ", "class ");
             } catch (Exception ex) {
@@ -343,7 +374,7 @@ public class DocGenerator {
 
     }
 
-    public void getDesignDoc() throws IOException {
+    public void genDesignDoc() throws IOException {
 
         File outputDir = new File(outputFile).getParentFile();
         outputDir.mkdirs();
@@ -390,134 +421,23 @@ public class DocGenerator {
 
                                     markdownBuilder.append("\n**" + javaClass.getName()).append("**\n");
 
-                                    try {
-                                        String output = chat(String.format("As an software engineer writing docs create a short description of this class based on its DEFINITION and JAVADOC, " +
-                                                        "just combine them and create valid markdown which is a short description of this class. Do not mention JavaDoc. Just use the JavaDoc to describe the class" +
-                                                        "\nDEFINITION:\n %s \n" +
-                                                        "\nJAVADOC:\n %s \n", javaClass.getDefinition(), javaClass.getJavadoc()),
-                                                "output should be in markdown format").get();
-
-                                        markdownBuilder.append("\n").append(output).append("\n");
-                                    } catch (Exception e) {
-                                        e.printStackTrace();
-                                    }
+                                    markdownBuilder.append(generateShortDescriptionForClass(javaItems, javaClass));
 
                                     createMethodFilter(javaItems, javaClass)
                                             .forEach(javaMethod -> {
                                                 methodCodeListingJava(markdownBuilder, javaMethod);
 
-                                                try {
-                                                    String output = chat(String.format("As an software engineer writing docs create a brief description " +
-                                                                    "of what this method does, method = %s (%s) which is defined in class %s is doing based on its BODY" +
-                                                                    "\nBODY:\n %s \n", javaMethod.getSimpleName(), javaMethod.getName(), javaClass.getName(), javaMethod.getBody()),
-                                                            "output should be in markdown format").get();
+                                                String briefMethodDescription = briefDescriptionOfMethod(javaClass, javaMethod);
+                                                String stepByStep = stepByStepMethodDescription(javaClass, javaMethod);
 
-                                                    if (output != null && !output.isBlank()) {
-                                                        markdownBuilder.append("\n").append("### ").append(javaMethod.getSimpleName()).append(" Overview \n");
-                                                        markdownBuilder.append("\n").append(output).append("\n");
-                                                    }
-                                                } catch (Exception e) {
-                                                    e.printStackTrace();
-                                                }
+                                                String sequenceDiagram = sequenceDiagramGen(mermaid, images, javaClass, javaMethod, stepByStep);
+
+                                                markdownBuilder.append(briefMethodDescription)
+                                                        .append(stepByStep)
+                                                        .append(sequenceDiagram);
 
 
 
-                                                final String imageForMethod = javaMethod.getName().replace(".", "_") + ".png";
-                                                final String mermaidSeqForMethod = javaMethod.getName().replace(".", "_") + ".mmd";
-
-                                                File mermaidMethodFile = new File(mermaid, mermaidSeqForMethod);
-                                                File pngMethodFile = new File(images, imageForMethod);
-
-                                                String methodInstruction = String.format("You will create a sequence mermaid diagram for a given method. \n" +
-                                                        "Here's a concise guide for creating Mermaid sequence diagrams:\n" +
-                                                        "Start by defining the sequence diagram using the sequenceDiagram keyword." +
-                                                        "Don't use fully qualified class names instead put the package name in a title \n" +
-                                                        "Define participants using the participant keyword followed by the participant name.\n" +
-                                                        "Use arrows to represent messages between participants.\n" +
-                                                        "Use -> for synchronous messages.\n" +
-                                                        "Use --> for asynchronous messages.\n" +
-                                                        "Use ->> for response messages.\n" +
-                                                        "Use -->> for asynchronous response messages.\n" +
-                                                        "Use the appropriate syntax for each message.\n" +
-                                                        "Use the Note keyword to add notes to the diagram.\n" +
-                                                        "Use Note right of to add a note to the right of a participant.\n" +
-                                                        "Use Note left of to add a note to the left of a participant.\n" +
-                                                        "Use Note over to add a note over two or more participants.\n" +
-                                                        "Use the loop keyword to create loops in the diagram.\n" +
-                                                        "Use the alt and opt keywords to create alternative paths in the diagram.\n" +
-                                                        "Use the title keyword to add a title to the diagram.\n" +
-                                                        "Here's an example of Mermaid code for a sequence diagram:\n" +
-                                                        "sequenceDiagram\n" +
-                                                                "    participant A\n" +
-                                                                "    participant B\n" +
-                                                                "    Note right of A: A note\n" +
-                                                                "    A->>B: Synchronous message\n" +
-                                                                "    B-->A: Asynchronous message\n" +
-                                                                "    B->>A: Response message\n" +
-                                                                "    A-->>B: Asynchronous response message\n" +
-                                                                "    Note left of B: Another note\n" +
-                                                                "    loop Loop example\n" +
-                                                                "        alt Alternative example\n" +
-                                                                "            A->>B: Option 1\n" +
-                                                                "        else Option 2\n" +
-                                                                "            break when the booking process fails\n" +
-                                                                "                API-->Consumer: show failure\n" +
-                                                                "            end\n" +
-                                                                "        end\n" +
-                                                                "        A->>B: Loop message\n" +
-                                                                "    end\n" +
-                                                                "    title Sequence diagram example\n" +
-                                                                "    B->A: A very long message that needs to be broken\n" +
-                                                        "\nAs an software engineer create a UML sequence diagram for this method %s for class %s \nBODY:\n %s \n", javaMethod.getSimpleName(), javaClass.getName(), javaMethod.getBody());
-
-                                                try {
-
-                                                    String errors = "";
-
-                                                    for (int i = 0; i < 5; i++) {
-
-                                                        String output = chat(methodInstruction,
-                                                                    "output should be in mermaid format and only mermaid format no markdown DO NO put in the text ```mermaid " + errors).get();
-
-
-                                                        if (output == null || output.isBlank()) {
-                                                                continue;
-                                                        }
-
-
-
-                                                        output = extractSequenceDiagram(output);
-                                                        Files.write(mermaidMethodFile.toPath(), output.getBytes(StandardCharsets.UTF_8));
-
-                                                        Result result = runMmdc(mermaidMethodFile, pngMethodFile);
-                                                        if (result.result != 0 || result.exception != null) {
-                                                            errors = String.format("Please just valid mermaid as output. That mermaid text you sent failed, error output from mermaid %s output from mermaid %s ", result.errors, result.output);
-                                                        } else {
-                                                            break;
-                                                        }
-                                                    }
-
-                                                    if (pngMethodFile.exists()) {
-                                                        markdownBuilder.append("\n![sequence diagram](./images/" + imageForMethod + ")\n\n");
-                                                    }
-                                                } catch (Exception e) {
-                                                    e.printStackTrace();
-                                                }
-
-
-                                                try {
-                                                    String output = chat(String.format("As an software engineer writing docs create a step by step but concise description " +
-                                                                    "of this method %s which is defined in class %s is doing based on its BODY" +
-                                                                    "\nBODY:\n %s \n", javaMethod.getSimpleName(), javaClass.getName(), javaMethod.getBody()),
-                                                            "output should be in markdown format").get();
-
-                                                    if (output != null && !output.isBlank()) {
-                                                        markdownBuilder.append("\n").append("### ").append(javaMethod.getSimpleName()).append(" Step by Step  \n");
-                                                        markdownBuilder.append("\n").append(output).append("\n");
-                                                    }
-                                                } catch (Exception e) {
-                                                    e.printStackTrace();
-                                                }
 
 
                                             });
@@ -537,6 +457,174 @@ public class DocGenerator {
         } else {
             throw new IllegalStateException(String.format(
                     "Directory does not exist %s or is not a directory", dir));
+        }
+    }
+
+    private  String sequenceDiagramGen(File mermaid, File images, JavaItem javaClass, JavaItem javaMethod, String stepByStep) {
+        final String imageForMethod = javaMethod.getName().replace(".", "_") + ".png";
+        final String mermaidSeqForMethod = javaMethod.getName().replace(".", "_") + ".mmd";
+        StringBuilder markdownBuilder = new StringBuilder();
+
+        File mermaidMethodFile = new File(mermaid, mermaidSeqForMethod);
+        File pngMethodFile = new File(images, imageForMethod);
+
+
+        if (useExistingMermaidIfFound) {
+            if (mermaidMethodFile.exists()) {
+                String mContent =  FileUtils.readFile(mermaidMethodFile);
+                if (!this.inlineMermaid) {
+                    markdownBuilder.append("\n![sequence diagram](./images/" + imageForMethod + ")\n\n");
+                } else {
+                    markdownBuilder.append("\n```mermaid\n").append(mContent).append("\n```\n");
+                }
+                return markdownBuilder.toString();
+            }
+        }
+
+        String baseMermaidInstruction = "You will create a sequence mermaid diagram for a given method. \n" +
+                "Here's a concise guide for creating Mermaid sequence diagrams:\n" +
+                "Start by defining the sequence diagram using the sequenceDiagram keyword." +
+                "Don't use fully qualified class names instead put the package name in a title \n" +
+                "Define participants using the participant keyword followed by the participant name.\n" +
+                "Use arrows to represent messages between participants.\n" +
+                "Use -> for synchronous messages.\n" +
+                "Use --> for asynchronous messages.\n" +
+                "Use ->> for response messages.\n" +
+                "Use -->> for asynchronous response messages.\n" +
+                "Use the appropriate syntax for each message.\n" +
+                "Use the Note keyword to add notes to the diagram.\n" +
+                "Use Note right of to add a note to the right of a participant.\n" +
+                "Use Note left of to add a note to the left of a participant.\n" +
+                "Use Note over to add a note over two or more participants.\n" +
+                "Use the loop keyword to create loops in the diagram.\n" +
+                "Use the alt and opt keywords to create alternative paths in the diagram.\n" +
+                "Use the title keyword to add a title to the diagram.\n" +
+                "Do not use fully qualified classnames (class name only) for the participants.\n" +
+                "Here's an example of Mermaid code for a sequence diagram:\n" +
+                "sequenceDiagram\n" +
+                "    participant A\n" +
+                "    participant B\n" +
+                "    Note right of A: A note\n" +
+                "    A->>B: Synchronous message\n" +
+                "    B-->A: Asynchronous message\n" +
+                "    B->>A: Response message\n" +
+                "    A-->>B: Asynchronous response message\n" +
+                "    Note left of B: Another note\n" +
+                "    loop Loop example\n" +
+                "        alt Alternative example\n" +
+                "            A->>B: Option 1\n" +
+                "        else Option 2\n" +
+                "            break when the booking process fails\n" +
+                "                API-->Consumer: show failure\n" +
+                "            end\n" +
+                "        end\n" +
+                "        A->>B: Loop message\n" +
+                "    end\n" +
+                "    title Sequence diagram example\n" +
+                "    B->A: A very long message that needs to be broken\n" +
+                "\nAs an software engineer create a UML sequence diagram for ";
+
+        String methodInstruction = String.format("%s this method %s for class %s \nBODY:\n %s \n",
+                baseMermaidInstruction, javaMethod.getSimpleName(), javaClass.getName(), javaMethod.getBody());
+
+        String result = generateSequence(imageForMethod, markdownBuilder, mermaidMethodFile, pngMethodFile, methodInstruction);
+
+//        if (isBlank(result)) {
+//            methodInstruction = String.format("%s this method %s for class %s \nBODY:\n %s \n",
+//                    baseMermaidInstruction, javaMethod.getSimpleName(), javaClass.getName(), stepByStep);
+//            result = generateSequence(imageForMethod, markdownBuilder, mermaidMethodFile, pngMethodFile, methodInstruction);
+//        }
+
+        return result;
+    }
+
+    private String generateSequence(String imageForMethod, StringBuilder markdownBuilder, File mermaidMethodFile, File pngMethodFile, String methodInstruction) {
+        try {
+
+            String error = "";
+            String mermaidContent = "";
+
+            for (int i = 0; i < 2; i++) {
+
+                mermaidContent = chat(methodInstruction + error,
+                            "output should be in mermaid format" );
+
+
+                if (mermaidContent == null || mermaidContent.isBlank()) {
+                        mermaidContent="";
+                        continue;
+                }
+
+
+
+                mermaidContent = extractSequenceDiagram(mermaidContent);
+                FileUtils.writeFile(mermaidMethodFile, mermaidContent);
+
+                Result result = runMmdc(mermaidMethodFile, pngMethodFile);
+                if (result.result != 0 || result.exception != null) {
+                    error = "\nThis mermaid that you generated has errors \n```mermaid\n" + mermaidContent + "\n```\n Can you fix the " +
+                            "mermaid syntax and try again and improve descriptions? " +
+                            "please label each line as in  System-->>searchNewsFunc should be System-->>searchNewsFunc: return." +
+                            "Also activate and deactivate each participant correctly \nerrors:\n "
+                            + result.errors + "\noutput:\n " + result.output;
+                } else {
+                    break;
+                }
+            }
+
+            if (pngMethodFile.exists()) {
+                if (!this.inlineMermaid) {
+                    markdownBuilder.append("\n![sequence diagram](./images/" + imageForMethod + ")\n\n");
+                } else {
+                    markdownBuilder.append("\n```mermaid\n").append(mermaidContent).append("\n```\n");
+                }
+                return markdownBuilder.toString();
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
+        }
+        return "";
+    }
+
+    private static String briefDescriptionOfMethod(JavaItem javaClass, JavaItem javaMethod) {
+        StringBuilder markdownBuilder = new StringBuilder();
+        try {
+            String output = chat(String.format("As an software engineer writing docs create a brief description " +
+                            "of what this method does, method = %s (%s) which is defined in class %s is doing based on its BODY" +
+                            "\nBODY:\n %s \n", javaMethod.getSimpleName(), javaMethod.getName(), javaClass.getName(), javaMethod.getBody()),
+                    "output should be in markdown format");
+
+            if (output != null && !output.isBlank()) {
+                markdownBuilder.append("\n").append("### ").append(javaMethod.getSimpleName()).append(" Overview \n");
+                markdownBuilder.append("\n").append(output).append("\n");
+            }
+            return markdownBuilder.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
+
+    private static String stepByStepMethodDescription(JavaItem javaClass, JavaItem javaMethod) {
+        StringBuilder markdownBuilder = new StringBuilder();
+        try {
+            String output = chat(String.format("As an software engineer writing docs create a step by step but concise description " +
+                            "of this method %s which is defined in class %s is doing based on its BODY" +
+                            "\nBODY:\n %s \n", javaMethod.getSimpleName(), javaClass.getName(), javaMethod.getBody()),
+                    "output should be in markdown format");
+
+            if (output != null && !output.isBlank()) {
+                markdownBuilder.append("\n").append("### ").append(javaMethod.getSimpleName()).append(" Step by Step  \n");
+                markdownBuilder.append("\n").append(output).append("\n");
+                return markdownBuilder.toString();
+            } else {
+                return "";
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
         }
     }
 
@@ -593,6 +681,18 @@ public class DocGenerator {
         }).collect(Collectors.joining());
 
         Files.write(new File(outputDir, "all.md").toPath(), all.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static void generateAllImprovements(File outputDir) throws IOException {
+        String all = Arrays.stream(outputDir.listFiles((dir1, name) -> name.endsWith(".md"))).map(file -> {
+            try {
+                return Files.readString(file.toPath()) + "\n";
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }).collect(Collectors.joining());
+
+        Files.write(new File(outputDir, "all-improve.md").toPath(), all.getBytes(StandardCharsets.UTF_8));
     }
 
     private static void generateJavaDocAll(File outputDir) throws IOException {
@@ -670,7 +770,7 @@ public class DocGenerator {
                                 " method = %s (%s) which is defined in class %s is doing based on its BODY" +
                                 "\nBODY:\n %s \n CLASS JAVADOC: %s \n", javaMethod.getSimpleName(), javaMethod.getName(),
                                 javaClass.getName(), javaMethod.getBody(), classJavaDoc),
-                        "output should be in JavaDoc format").get();
+                        "output should be in JavaDoc format");
 
                 if (output != null && !output.isBlank()) {
                     markdownBuilder.append("\n").append("### ").append(javaMethod.getSimpleName()).append("\n\n");
@@ -725,13 +825,35 @@ public class DocGenerator {
                     "\nMETHODS:\n%s\nFIELDS:\n%s", javaClass.getDefinition(), javaClass.getJavadoc(), methods, fields);
 
             classJavadocTmp = chat(directive,
-                    "output should be in JavaDoc format").get();
+                    "output should be in JavaDoc format");
 
             markdownBuilder.append("\n\n```java\n").append(classJavadocTmp).append("\n```\n\n");
         } catch (Exception e) {
             e.printStackTrace();
         }
         return classJavadocTmp;
+    }
+
+    private String generateShortDescriptionForClass(List<JavaItem> javaItems, JavaItem javaClass) {
+        final var methods = getJavaMethodsForClass(javaClass, javaItems);
+        final var fields = getFieldsForClass(javaClass, javaItems);
+
+
+        final var directive = String.format("As an software engineer write a short description for this class" +
+                "\nCLASS DEFINITION:\n %s \n" +
+                "\nMETHODS:\n%s\nFIELDS:\n%s\nJAVADOC FOR CLASS\n%s",
+                javaClass.getDefinition(), javaClass.getJavadoc(), methods, fields, javaClass.getJavadoc());
+
+        try {
+            String output = chat(directive,
+                    "output should be in markdown format");
+
+            return output == null ? "" : output;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return "";
+        }
+
     }
 
     private String getJavaMethodsForClass(JavaItem javaClass, List<JavaItem> javaItems) {
@@ -818,10 +940,48 @@ public class DocGenerator {
                     .collect(Collectors.toList());
             imageFiles.forEach(imageFile -> {
 
+
                 File mermaidFile = new File(mermaidDir, imageFile.getName().replace(".png", ".mmd"));
+                String mermaidContent = FileUtils.readFile(mermaidFile);
+
                 if (mermaidFile.lastModified() > imageFile.lastModified()) {
                     System.out.println("Regenerating " + imageFile);
-                    runMmdc(mermaidFile, imageFile);
+
+
+
+
+                    String error = "";
+                    for (int i = 0; i < 3; i++) {
+                        if (!error.isBlank()) {
+
+                            try {
+                                mermaidContent =  chat(error, "output format is a mermaid sequence diagram. Do not put any other content in the response beside the fixed mermaid file");
+
+                                mermaidContent = extractSequenceDiagram(mermaidContent);
+                                System.out.println(mermaidContent);
+                                FileUtils.writeFile(mermaidFile, mermaidContent);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        Result result = runMmdc(mermaidFile, imageFile);
+
+
+
+                        if (result.result == 0) {
+                            System.out.println("SUCCESS! ###################################################");
+                            break;
+                        } else {
+                            error = "This mermaid that you generated has errors \n```mermaid\n" + mermaidContent + "\n```\n Can you fix the " +
+                                    "mermaid syntax and try again and improve descriptions? " +
+                                    "please label each line as in  System-->>searchNewsFunc should be System-->>searchNewsFunc: return." +
+                                    "Also activate and deactivate each participant correctly \nerrors:\n "
+                                    + result.errors + "\noutput:\n " + result.output;
+
+                        }
+                    }
+
                 }
             });
         }
@@ -835,7 +995,7 @@ public class DocGenerator {
         File dir = new File(inputDirectoryPath).getCanonicalFile();
         if (dir.exists() && dir.isDirectory()) {
 
-            generateAll(outputDir);
+            generateAllImprovements(outputDir);
 
             List<JavaItem> javaItems = scanDirectory(dir);
 
@@ -865,7 +1025,9 @@ public class DocGenerator {
                                                         "practices list any issues you see you see",  methodMarkdownBuilder, javaClass, javaMethod);
 
                                                 try {
-                                                    final var output = chat("Summarize these into a single list with one header level 2 called improvements: " + methodMarkdownBuilder, "output should be markdown").get();
+                                                    final var output = chat("Summarize these into a single list with " +
+                                                            "one header level 2 called improvements: " + methodMarkdownBuilder,
+                                                            "output should be markdown");
                                                     if (output == null || output.isBlank()) {
                                                         markdownBuilder.append(methodMarkdownBuilder);
                                                     } else {
@@ -968,7 +1130,7 @@ public class DocGenerator {
                             javaClass.getName(), javaMethod.getBody(), javaClass.getJavadoc());
 
                     final var  system = String.format("output should be in %s format", outputFormat);
-                    output = chat(user, system).get();
+                    output = chat(user, system);
 
                     if (!isBlank(output)) {
                         break;
@@ -1019,6 +1181,14 @@ public class DocGenerator {
          */
         private String outputFile;
 
+        private boolean inlineMermaid;
+        private boolean useExistingMermaidIfFound;
+
+        public Builder inlineMermaid(boolean inlineMermaid) {
+            this.inlineMermaid = inlineMermaid;
+            return this;
+        }
+
         private Builder() {
         }
 
@@ -1050,7 +1220,12 @@ public class DocGenerator {
          * @return a new Java2CSV instance.
          */
         public DocGenerator build() {
-            return new DocGenerator(this.inputDirectoryPath, this.outputFile);
+            return new DocGenerator(this.inputDirectoryPath, this.outputFile, this.inlineMermaid, this.useExistingMermaidIfFound);
+        }
+
+        public Builder useExistingMermaidIfFound(boolean b) {
+            this.useExistingMermaidIfFound = b;
+            return this;
         }
     }
 
