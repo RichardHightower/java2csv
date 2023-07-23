@@ -481,25 +481,26 @@ public class DocGenerator {
             }
         }
 
-        String baseMermaidInstruction = "You will create a sequence mermaid diagram for a given method. \n" +
+        String baseMermaidInstruction = "As a software engineer. You will create a sequence mermaid diagram for a given method. \n" +
                 "Here's a concise guide for creating Mermaid sequence diagrams:\n" +
-                "Start by defining the sequence diagram using the sequenceDiagram keyword." +
-                "Don't use fully qualified class names instead put the package name in a title \n" +
+                "Start by defining the sequence diagram using the sequenceDiagram keyword. Don't use fully qualified class names instead, put the package name in a title. \n" +
                 "Define participants using the participant keyword followed by the participant name.\n" +
                 "Use arrows to represent messages between participants.\n" +
+                "Remember to escape classes that have generics like List<Foo> in java and use List~Foo~ in mermaid.\n" +
                 "Use -> for synchronous messages.\n" +
                 "Use --> for asynchronous messages.\n" +
                 "Use ->> for response messages.\n" +
                 "Use -->> for asynchronous response messages.\n" +
                 "Use the appropriate syntax for each message.\n" +
                 "Use the Note keyword to add notes to the diagram.\n" +
+                "Ensure each message has a short concise description.  Messages should all be on one like with no newlines characters. in the description \n" +
                 "Use Note right of to add a note to the right of a participant.\n" +
                 "Use Note left of to add a note to the left of a participant.\n" +
                 "Use Note over to add a note over two or more participants.\n" +
                 "Use the loop keyword to create loops in the diagram.\n" +
                 "Use the alt and opt keywords to create alternative paths in the diagram.\n" +
                 "Use the title keyword to add a title to the diagram.\n" +
-                "Do not use fully qualified classnames (class name only) for the participants.\n" +
+                "Do not use fully qualified classnames (class name only no packages) for the participants.\n" +
                 "Here's an example of Mermaid code for a sequence diagram:\n" +
                 "sequenceDiagram\n" +
                 "    participant A\n" +
@@ -522,6 +523,8 @@ public class DocGenerator {
                 "    end\n" +
                 "    title Sequence diagram example\n" +
                 "    B->A: A very long message that needs to be broken\n" +
+                "This event-->>Publisher: Set<Triple<String, String, String>> SHOULD BE This event-->>Publisher: Set~Triple~String, String, String~~." +
+                "" +
                 "\nAs an software engineer create a UML sequence diagram for ";
 
         String methodInstruction = String.format("%s this method %s for class %s \nBODY:\n %s \n",
@@ -839,7 +842,8 @@ public class DocGenerator {
         final var fields = getFieldsForClass(javaClass, javaItems);
 
 
-        final var directive = String.format("As an software engineer write a short description for this class" +
+        final var directive = String.format("As an software engineer write a short description for this class. Just create a description for the class." +
+                        "The methods and fields are just here for context. Only describe the class." +
                 "\nCLASS DEFINITION:\n %s \n" +
                 "\nMETHODS:\n%s\nFIELDS:\n%s\nJAVADOC FOR CLASS\n%s",
                 javaClass.getDefinition(), javaClass.getJavadoc(), methods, fields, javaClass.getJavadoc());
