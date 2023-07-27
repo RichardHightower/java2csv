@@ -590,8 +590,24 @@ public class DocGenerator {
             for (int i = 0; i < 5; i++) {
 
                 mermaidContent = chat(methodInstruction + error,
-                            "output should be in mermaid format" );
+                            "As a senior developer, your assignment is to produce documentation that employs Mermaid sequence diagrams to elucidate the functionality of specific sections of code. Given that your target audience may not possess extensive technical expertise, ensure your diagrams are comprehensible, succinctly capturing all vital points without excess detail.\n" +
+                                    "\n" +
+                                    "Infuse your diagrams with any relevant business rules or domain knowledge derived from comments or log statements embedded within the code, thus enhancing readability and understanding.\n" +
+                                    "\n" +
+                                    "Ensure the diagrams lucidly represent critical concepts. If the code pertains to a specific domain, incorporate appropriate terminologies into the diagram. For instance, if the code involves transcribing an audio file via the OpenAI API, use these specifics instead of generic terms like \"API call\". Replace \"System.out.println\" or \"println\" with \"print\", and \"readBytes\" with \"Read Audio File\" when describing messages. Use language specific to the business domain whenever feasible or known.\n" +
+                                    "\n" +
+                                    "Avoid using participant aliases in the sequence diagrams; stick to the original object or class names present in the class file. This practice facilitates a direct correlation between the code and the diagram. Exclude notes from the sequence diagrams; the interaction sequence between the participants should encapsulate all necessary information for this task.\n" +
+                                    "\n" +
+                                    "Refrain from using 'activate' or 'deactivate' commands in the diagram, as the focus should be on the interaction and action flow among participants, rather than representing each participant's active duration. Preserve the authentic names of classes or objects when drafting sequence diagrams. Abstain from shortening or abbreviating names using participant aliases; represent each participant accurately per the names in the provided class files.\n" +
+                                    "\n" +
+                                    "Focus on classes or objects that perform substantial actions or exhibit significant interactions when identifying participants. Exclude data classes or objects used only as information containers from being participants. Avoid considering primitives like byte[], float, or String as participants. Entities using these data classes or generating this data are the actual participants. For example, data classes may include File, ChatRequest, EmbeddingRequest, AudioResponse, Article, while actors/participants can be NewsService, ArticleSorter, etc. \"Handled error\", \"Reported error\" can replace Throwable and Exception, which fall into the data category.\n" +
+                                    "\n" +
+                                    "Ensure data classes are not participants. Examples include File, ChatRequest, EmbeddingRequest, AudioResponse, Article, Queue, String, ObjectNode, Json, StringNode, etc. Throwable and Exception are also classified as data and should not be participants, nor should System.out or primitives like byte[], float, int.\n" +
+                                    "\n" +
+                                    "Example participants that are desirable include action-oriented classes like NewsService, ArticleSorter, etc." +
+                                    "\noutput should be in mermaid format" );
 
+                error = "";
 
                 if (mermaidContent == null || mermaidContent.isBlank()) {
                         mermaidContent="";
@@ -604,22 +620,13 @@ public class DocGenerator {
                 mermaidContent = extractSequenceDiagram(mermaidContent);
                 FileUtils.writeFile(mermaidMethodFile, mermaidContent);
 
-                RuleRunner ruleRunner;
-                List<Rule> rules = new ArrayList<>();
-                rules.add(new AvoidNotesRule());
-                rules.add(new NoMethodCallsInDescriptionsRule());
-                rules.add(new AvoidActivateDeactivateRule());
-                rules.add(new ParticipantAliasRule());
-                rules.add(new SystemOutRule());
-                rules.add(new DataClassesAndPrimitiveRule());
-                ruleRunner = RuleRunner.builder().rules(rules).build();
+                RuleRunner ruleRunner = buildRunner();
 
                 List<RuleResult> checks = ruleRunner.checks(Arrays.stream(mermaidContent.split("\n")).collect(Collectors.toList()));
 
                 if (!checks.isEmpty()) {
                     error = "\nThis mermaid that you generated has validation issues \n```mermaid\n" + mermaidContent + "\n```\n Can you fix the " +
                             "mermaid validation issues and improve descriptions? JSON validation results" + RuleRunner.serializeRuleResults(checks);
-                    continue;
                 }
 
 
@@ -630,7 +637,9 @@ public class DocGenerator {
                             "please label each line as in  System-->>searchNewsFunc should be System-->>searchNewsFunc: return." +
                             "Also activate and deactivate each participant correctly \nerrors:\n "
                             + result.errors + "\noutput:\n " + result.output;
-                } else {
+                }
+
+                if (isBlank(error)) {
                     break;
                 }
             }
@@ -649,6 +658,19 @@ public class DocGenerator {
             return "";
         }
         return "";
+    }
+
+    private static RuleRunner buildRunner() {
+        RuleRunner ruleRunner;
+        List<Rule> rules = new ArrayList<>();
+        rules.add(new AvoidNotesRule());
+        rules.add(new NoMethodCallsInDescriptionsRule());
+        rules.add(new AvoidActivateDeactivateRule());
+        rules.add(new ParticipantAliasRule());
+        rules.add(new SystemOutRule());
+        rules.add(new DataClassesAndPrimitiveRule());
+        ruleRunner = RuleRunner.builder().rules(rules).build();
+        return ruleRunner;
     }
 
     private static String briefDescriptionOfMethod(JavaItem javaClass, JavaItem javaMethod) {

@@ -1,21 +1,18 @@
 sequenceDiagram
-    participant com.bouqs.json.Json
-    participant getMapper()
+    participant Json
+    participant ObjectMapper
+    participant JsonNode
     participant JsonProcessingException
     participant JsonException
-    participant JsonNode
     
-    Note over com.bouqs.json.Json: Create Json object
-    
-    com.bouqs.json.Json->>getMapper(): Retrieve mapper
-    getMapper()-->>com.bouqs.json.Json: Return mapper
-    
-    Note over com.bouqs.json.Json: Parse JSON to JsonNode
-    
-    com.bouqs.json.Json->>getMapper(): Read JSON tree
-    getMapper()-->>JsonNode: Return JsonNode
-    alt Successful parsing
-        JsonNode-->>com.bouqs.json.Json: Return JsonNode
-    else Parsing error
-        JsonProcessingException-->>JsonException: Throw JsonException
+    Json->>ObjectMapper: Get ObjectMapper
+    Note over ObjectMapper: Returns the ObjectMapper instance
+    ObjectMapper->>Json: Convert json to JsonNode
+    Note over JsonNode: Convert the json string to a JsonNode object
+    Note right of JsonNode: Returns the converted JsonNode object
+    alt JsonProcessingException occurred
+        JsonNode-->>JsonException: Throw JsonException when error occurs
+        Note over JsonException: Wraps the JsonProcessingException in a JsonException
+    else
+        JsonNode-->>Json: Return the converted JsonNode
     end

@@ -1,24 +1,24 @@
 sequenceDiagram
-    title toJson method for class com.bouqs.json.Json
-
-    participant src
     participant Json
-    participant getMapper()
+    participant ObjectMapper
+    participant Object
     participant JsonProcessingException
     participant JsonException
-
-    src->>Json: toJson(src)
-    alt Json.getMapper()
-        Json->>getMapper(): getMapper()
-        alt getMapper().writeValueAsString()
-            getMapper()-->>Json: writeValueAsString(src)
-        else JsonProcessingException
-            note over JsonProcessingException: Catch Exception
-            JsonProcessingException->>JsonException: JsonException(e)
-        end
-    else JsonProcessingException
-        note over JsonProcessingException: Catch Exception
-        JsonProcessingException->>JsonException: JsonException(e)
+    
+    Json->>ObjectMapper: Get mapper
+    Object-->>Json: src
+    ObjectMapper->>Json: Write value as string
+    rect rgba(255,255,204,0.5)
+        Json-->>Json: Return JSON String
     end
-
-    Json-->>src: return valueAsString
+    
+    alt JSON processing successful
+        rect rgba(204,255,204,0.3)
+            Json-->>Json: Return JSON String
+        end
+    else JSON processing failed
+        rect rgba(255,204,204,0.3)
+            Json-->>JsonProcessingException: e
+            JsonProcessingException-->>JsonException: Create JsonException
+            JsonException-->>Json: Throw JsonException
+        end

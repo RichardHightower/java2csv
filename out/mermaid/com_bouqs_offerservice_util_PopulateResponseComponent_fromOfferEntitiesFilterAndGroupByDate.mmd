@@ -1,35 +1,38 @@
 sequenceDiagram
-    participant PopulateResponseComponent
-    participant Utils
-    participant LocalDate
-    participant OfferEntity
-    participant MonthResponse
-    participant DayResponse
-    participant Map
-    participant Set
-    participant List
-    participant DeliveryWindowResponse
+    participant log as log
+    participant offerEntities as Map<LocalDate, Set<OfferEntity>>
+    participant monthResponses as List<MonthResponse>
+    participant dayResponsesMap as Map<String, List<DayResponse>>
+    participant deliveryWindowResponses as List<DeliveryWindowResponse>
+    participant date as LocalDate
+    participant entities as Set<OfferEntity>
+    participant Utils as Utils
+    participant dayResponse as DayResponse
+    participant deliveryDate as LocalDate
+    participant deliveryDateYearMonth as String
+    participant previousDayResponses as List<DayResponse>
+    participant responseGroupedByMonth as Map<List<Integer>, List<DayResponse>>
+    participant gc as List<Integer>
+    participant dr as List<DayResponse>
+    participant monthResponse as MonthResponse
 
-    PopulateResponseComponent->>Utils: Start fromOfferEntitiesFilterAndGroupByDate
-    PopulateResponseComponent->>Utils: fromDate: LocalDate; toDate: LocalDate
-    PopulateResponseComponent->>List: monthResponses = new ArrayList()
-    PopulateResponseComponent->>Map: dayResponsesMap = new HashMap()
-
-    alt offerEntities is not null
-        PopulateResponseComponent->>Map: offerEntities.forEach((date, entities) -> {...})
-
-        alt deliveryWindowResponses is not empty
-            PopulateResponseComponent->>List: deliveryWindowResponses.sort(Comparator.comparing(DeliveryWindowResponse::getCutoff))
-            PopulateResponseComponent->>DayResponse: dayResponse = DayResponse.builder()...
-        end
-        PopulateResponseComponent->>String: deliveryDateYearMonth = Utils.buildYearMonthKey(date.getYear(), date.getMonthValue())
-        PopulateResponseComponent->>List: previousDayResponses = dayResponsesMap.getOrDefault(deliveryDateYearMonth, new ArrayList())
-        PopulateResponseComponent->>List: previousDayResponses.add(dayResponse)
-        PopulateResponseComponent->>Map: dayResponsesMap.put(deliveryDateYearMonth, previousDayResponses)
-    end
-
-    PopulateResponseComponent->>Map: responseGroupedByMonth = dayResponsesMap.values().stream()...
-    PopulateResponseComponent->>Map: responseGroupedByMonth.forEach((gc, dr) -> {...})
-
-    PopulateResponseComponent->>List: monthResponses.add(monthResponse)
-    PopulateResponseComponent->>List: return monthResponses
+    log->>log: trace("Start fromOfferEntitiesFilterAndGroupByDate")
+    log-->>log: debug("fromDate: {}; toDate: {}", fromDate, toDate)
+    offerEntities-->>entities: forEach(date, entities)
+    entities->>Utils: convertDeliveryWindow(offerEntity)
+    Utils-->>entities: deliveryWindowResponses
+    deliveryWindowResponses-->>deliveryWindowResponses: filter(Objects::nonNull)
+    deliveryWindowResponses-->>deliveryWindowResponses: flatMap(List::stream)
+    deliveryWindowResponses->>deliveryWindowResponses: sort(Comparator.comparing(DeliveryWindowResponse::getCutoff))
+    deliveryWindowResponses-->>dayResponse: create dayResponse
+    date->>Utils: buildYearMonthKey(date.getYear(), date.getMonthValue())
+    dayResponsesMap-->>dayResponsesMap: getOrDefault(deliveryDateYearMonth, new ArrayList<>())
+    previousDayResponses-->>previousDayResponses: add(dayResponse)
+    dayResponsesMap-->>dayResponsesMap: put(deliveryDateYearMonth, previousDayResponses)
+    dayResponsesMap-->>responseGroupedByMonth: values().stream()
+    responseGroupedByMonth-->>responseGroupedByMonth: flatMap(List::stream)
+    responseGroupedByMonth->>responseGroupedByMonth: groupingBy(dayResponse -> Arrays.asList(dayResponse.getDeliveryDate().getYear(), dayResponse.getDeliveryDate().getMonthValue()))
+    responseGroupedByMonth-->>monthResponses: forEach((gc, dr))
+    deliveryDate->>Utils: buildYearMonthKey(gc.get(0), gc.get(1))
+    monthResponses-->>monthResponses: add(monthResponse)
+    return-->monthResponses

@@ -1,16 +1,30 @@
 sequenceDiagram
-    title com.bouqs.json.JsonFactory.createObjectMapper()
+    title createObjectMapper() - JsonFactory
 
-    participant com.bouqs.json.JsonFactory as Factory
+    participant JsonFactory
     participant ObjectMapper
+    participant VisibilityChecker.Std
+    participant DeserializationFeature
+    participant JsonAutoDetect
 
-    Factory->ObjectMapper: createObjectMapper()
-    Factory->ObjectMapper: call constructor
-    ObjectMapper-->>Factory: mapper
+    JsonFactory->>ObjectMapper: createObjectMapper()
+    activate ObjectMapper
 
-    Factory->ObjectMapper: findAndRegisterModules()
-    Factory->ObjectMapper: disable fail on unknown properties
-    Factory->ObjectMapper: set visibility to ANY
-    Factory-->>ObjectMapper: mapper
+    ObjectMapper-->>VisibilityChecker.Std: Std.defaultInstance()
+    activate VisibilityChecker.Std
 
-    Factory-->>Factory: return mapper
+    VisibilityChecker.Std-->>VisibilityChecker.Std: withFieldVisibility(JsonAutoDetect.Visibility.ANY)
+    deactivate VisibilityChecker.Std
+
+    ObjectMapper-->>ObjectMapper: disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+    activate ObjectMapper
+
+    DeserializationFeature-->>ObjectMapper: FAIL_ON_UNKNOWN_PROPERTIES
+    deactivate DeserializationFeature
+
+    ObjectMapper-->>ObjectMapper: findAndRegisterModules()
+    deactivate ObjectMapper
+
+    ObjectMapper-->>JsonFactory: mapper
+    return mapper
+    deactivate ObjectMapper
