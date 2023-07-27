@@ -1,0 +1,10 @@
+sequenceDiagram
+    participant PopulateResponseComponent
+    participant "StringBuilder"
+
+    PopulateResponseComponent->>StringBuilder: Create new StringBuilder(nextPageHostname)
+    PopulateResponseComponent->>StringBuilder: Append "/".append(path).append("?")
+    Note right of PopulateResponseComponent: Remove last "&"
+    PopulateResponseComponent->>StringBuilder: Append key=value&#10;  (for each key-value pair)
+    PopulateResponseComponent->>StringBuilder: ...
+    Note right of PopulateResponseComponent: Get substring from 0 to (nextPageBuilder.length() - 1)

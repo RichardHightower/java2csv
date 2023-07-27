@@ -27,8 +27,8 @@ public class Main {
 //                    .genBusinessRules();
 
 
-            DocGenerator.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
-                    .genImageIfMissing();
+           // DocGenerator.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
+            //        .genImageIfMissing();
 
             final CountDownLatch countDownLatch = new CountDownLatch(3);
 
@@ -37,7 +37,8 @@ public class Main {
                     DocGenerator.builder().inputDirectoryPath(directoryPath).outputFile(outputFile)
                             .useExistingMermaidIfFound(true)
                             .inlineMermaid(true).build()
-                            .genDesignDoc();
+                            //.genDesignDoc();
+                            .runMethodGen();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

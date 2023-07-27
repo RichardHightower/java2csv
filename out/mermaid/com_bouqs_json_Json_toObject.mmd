@@ -1,0 +1,20 @@
+sequenceDiagram
+    title toObject method of com.bouqs.json.Json class
+
+    participant Json
+    participant User
+    participant Mapper
+    participant T
+    
+    User->Json: Invoke toObject(content, valueType)
+    Note over Json: Json receives content and valueType
+    Json->Json: Invoke getMapper()
+    Json->Mapper: Invoke readValue(content, valueType)
+    Note over Mapper: Mapper processes content and valueType
+    Mapper->Json: Return value
+    alt Processing successful
+        Json->User: Return value
+    else Error occurred
+        Json->Json: Throw JsonException
+        Json-->User: Catch and handle JsonException
+    end

@@ -1,0 +1,16 @@
+sequenceDiagram
+    title com.bouqs.json.JsonFactory.createObjectMapper()
+
+    participant com.bouqs.json.JsonFactory as Factory
+    participant ObjectMapper
+
+    Factory->ObjectMapper: createObjectMapper()
+    Factory->ObjectMapper: call constructor
+    ObjectMapper-->>Factory: mapper
+
+    Factory->ObjectMapper: findAndRegisterModules()
+    Factory->ObjectMapper: disable fail on unknown properties
+    Factory->ObjectMapper: set visibility to ANY
+    Factory-->>ObjectMapper: mapper
+
+    Factory-->>Factory: return mapper

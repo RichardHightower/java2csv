@@ -1,0 +1,49 @@
+---
+title: Package calendar (com.bouqs.offerservice.entity.dto.response.calendar)
+---
+
+classDiagram
+
+class ProductCalendarRegionResponse{
+  -String region
+  -Set<ProductCalendarShipDateResponse> shipDates
+}
+
+class ProductCalendarResponse{
+  -String productId
+  -String fromDate
+  -String toDate
+  -List<ProductCalendarMonthResponse> months
+}
+
+class ProductCalendarDayResponse{
+  -int day
+  -List<ProductCalendarFacilityResponse> facilities
+}
+
+class ProductCalendarFacilityResponse{
+  -String facilityId
+  -List<ProductCalendarShipMethodResponse> shipMethods
+}
+
+class ProductCalendarMonthResponse{
+  -int year
+  -int month
+  -List<ProductCalendarDayResponse> days
+}
+
+class ProductCalendarShipMethodResponse{
+  -String shipMethodId
+  -List<ProductCalendarRegionResponse> regions
+}
+
+class ProductCalendarShipDateResponse{
+  -String date
+  -String timeZone
+}
+
+ProductCalendarResponse --* ProductCalendarMonthResponse: contains
+ProductCalendarMonthResponse --* ProductCalendarDayResponse: contains
+ProductCalendarDayResponse --* ProductCalendarFacilityResponse: contains
+ProductCalendarFacilityResponse --* ProductCalendarShipMethodResponse: contains
+ProductCalendarRegionResponse --* ProductCalendarShipDateResponse: contains

@@ -1,6 +1,7 @@
 package com.cloudurable.docgen;
 
 import com.cloudurable.docgen.extract.FileUtils;
+import com.cloudurable.docgen.mermaid.validation.*;
 import com.cloudurable.jai.OpenAIClient;
 import com.cloudurable.jai.model.ClientResponse;
 import com.cloudurable.jai.model.text.completion.chat.ChatRequest;
@@ -460,6 +461,45 @@ public class DocGenerator {
         }
     }
 
+
+    public void runMethodGen() throws IOException {
+
+
+
+        File outputDir = new File(outputFile).getParentFile();
+        outputDir.mkdirs();
+        File mermaid = new File(outputDir, "mermaid");
+        mermaid.mkdirs();
+        File images = new File(outputDir, "images");
+        images.mkdirs();
+
+
+        File dir = new File(inputDirectoryPath).getCanonicalFile();
+        if (dir.exists() && dir.isDirectory()) {
+            List<JavaItem> javaItems = scanDirectory(dir);
+            Map<String, List<String>> classNameByPackage = mapPackageToClassDefs(javaItems);
+
+            classNameByPackage.entrySet().stream().forEach(entry -> {
+                final String packageName = entry.getKey();
+                createClassStream(javaItems, packageName)
+                        .forEach(javaClass -> {
+                                    createMethodFilter(javaItems, javaClass)
+                                            .forEach(javaMethod -> {
+                                                String sequenceDiagram = sequenceDiagramGen(mermaid, images, javaClass, javaMethod, "");
+                                                System.out.println(sequenceDiagram);
+                                            });
+                                }
+                        );
+
+            });
+
+
+        } else {
+            throw new IllegalStateException(String.format(
+                    "Directory does not exist %s or is not a directory", dir));
+        }
+    }
+
     private  String sequenceDiagramGen(File mermaid, File images, JavaItem javaClass, JavaItem javaMethod, String stepByStep) {
         final String imageForMethod = javaMethod.getName().replace(".", "_") + ".png";
         final String mermaidSeqForMethod = javaMethod.getName().replace(".", "_") + ".mmd";
@@ -547,7 +587,7 @@ public class DocGenerator {
             String error = "";
             String mermaidContent = "";
 
-            for (int i = 0; i < 2; i++) {
+            for (int i = 0; i < 5; i++) {
 
                 mermaidContent = chat(methodInstruction + error,
                             "output should be in mermaid format" );
@@ -560,8 +600,28 @@ public class DocGenerator {
 
 
 
+
                 mermaidContent = extractSequenceDiagram(mermaidContent);
                 FileUtils.writeFile(mermaidMethodFile, mermaidContent);
+
+                RuleRunner ruleRunner;
+                List<Rule> rules = new ArrayList<>();
+                rules.add(new AvoidNotesRule());
+                rules.add(new NoMethodCallsInDescriptionsRule());
+                rules.add(new AvoidActivateDeactivateRule());
+                rules.add(new ParticipantAliasRule());
+                rules.add(new SystemOutRule());
+                rules.add(new DataClassesAndPrimitiveRule());
+                ruleRunner = RuleRunner.builder().rules(rules).build();
+
+                List<RuleResult> checks = ruleRunner.checks(Arrays.stream(mermaidContent.split("\n")).collect(Collectors.toList()));
+
+                if (!checks.isEmpty()) {
+                    error = "\nThis mermaid that you generated has validation issues \n```mermaid\n" + mermaidContent + "\n```\n Can you fix the " +
+                            "mermaid validation issues and improve descriptions? JSON validation results" + RuleRunner.serializeRuleResults(checks);
+                    continue;
+                }
+
 
                 Result result = runMmdc(mermaidMethodFile, pngMethodFile);
                 if (result.result != 0 || result.exception != null) {

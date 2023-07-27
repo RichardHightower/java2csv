@@ -1,0 +1,84 @@
+sequenceDiagram
+    participant PopulateResponseComponent
+    participant OfferEntity
+    participant CompletableFuture
+    participant OfferResponse
+    participant materialOfferDao
+    participant MaterialOfferEntity
+    participant materialDao
+    participant MaterialOfOfferResponse
+
+    PopulateResponseComponent->>OfferEntity: populateMaterialForOffers(offerEntities)
+
+    loop for each offerEntity in offerEntities
+        OfferEntity->>CompletableFuture: supplyAsync()
+        CompletableFuture->>OfferResponse: build response
+
+        Note right of OfferResponse: Set offer properties
+
+        OfferResponse->>materialOfferDao: findBySkuEntityId(offerEntity.getId())
+     
+        Note right of materialOfferEntities: Check if materialOffers exist
+
+        alt materialOfferEntities is empty
+            materialOfferDao->>OfferResponse: return empty response
+        else materialOfferEntities is not empty
+            materialOfferDao->>materialDao: findById(materialOffer.getMaterialOfferId())
+            materialDao->>MaterialOfOfferResponse: build material response
+        end
+
+        Note right of OfferResponse: Set materials and availableUnits
+
+        MaterialOfOfferResponse-->>map: group by materialId
+
+        OfferResponse-->>materialOfferDao: return response
+
+        CompletableFuture-->>OfferEntity: complete response
+    end
+
+    OfferEntity-->>PopulateResponseComponent: return populated offers
+
+
+
+
+
+
+sequenceDiagram
+    participant PopulateResponseComponent
+    participant OfferEntity
+    participant CompletableFuture
+    participant OfferResponse
+    participant MaterialOfferEntity
+    participant materialOfferDao
+    participant materialDao
+    participant MaterialOfOfferResponse
+
+    PopulateResponseComponent->>OfferEntity: populateMaterialForOffers(offerEntities)
+
+    loop for each offerEntity in offerEntities
+        OfferEntity->>CompletableFuture: supplyAsync()
+        CompletableFuture->>OfferResponse: build response
+
+        Note right of OfferResponse: Set offer properties
+
+        OfferResponse->>materialOfferDao: findBySkuEntityId(offerEntity.getId())
+     
+        Note right of materialOfferEntities: Check if materialOffers exist
+
+        alt materialOfferEntities is empty
+            materialOfferDao->>OfferResponse: return empty response
+        else materialOfferEntities is not empty
+            materialOfferDao->>materialDao: findById(materialOffer.getMaterialOfferId())
+            materialDao->>MaterialOfOfferResponse: build material response
+        end
+
+        Note right of OfferResponse: Set materials and availableUnits
+
+        MaterialOfOfferResponse-->>map: group by materialId
+
+        OfferResponse-->>materialOfferDao: return response
+
+        CompletableFuture-->>OfferEntity: complete response
+    end
+
+    OfferEntity-->>PopulateResponseComponent: return populated offers

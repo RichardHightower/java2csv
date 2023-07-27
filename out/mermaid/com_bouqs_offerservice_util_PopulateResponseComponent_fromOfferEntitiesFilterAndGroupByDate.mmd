@@ -1,0 +1,35 @@
+sequenceDiagram
+    participant PopulateResponseComponent
+    participant Utils
+    participant LocalDate
+    participant OfferEntity
+    participant MonthResponse
+    participant DayResponse
+    participant Map
+    participant Set
+    participant List
+    participant DeliveryWindowResponse
+
+    PopulateResponseComponent->>Utils: Start fromOfferEntitiesFilterAndGroupByDate
+    PopulateResponseComponent->>Utils: fromDate: LocalDate; toDate: LocalDate
+    PopulateResponseComponent->>List: monthResponses = new ArrayList()
+    PopulateResponseComponent->>Map: dayResponsesMap = new HashMap()
+
+    alt offerEntities is not null
+        PopulateResponseComponent->>Map: offerEntities.forEach((date, entities) -> {...})
+
+        alt deliveryWindowResponses is not empty
+            PopulateResponseComponent->>List: deliveryWindowResponses.sort(Comparator.comparing(DeliveryWindowResponse::getCutoff))
+            PopulateResponseComponent->>DayResponse: dayResponse = DayResponse.builder()...
+        end
+        PopulateResponseComponent->>String: deliveryDateYearMonth = Utils.buildYearMonthKey(date.getYear(), date.getMonthValue())
+        PopulateResponseComponent->>List: previousDayResponses = dayResponsesMap.getOrDefault(deliveryDateYearMonth, new ArrayList())
+        PopulateResponseComponent->>List: previousDayResponses.add(dayResponse)
+        PopulateResponseComponent->>Map: dayResponsesMap.put(deliveryDateYearMonth, previousDayResponses)
+    end
+
+    PopulateResponseComponent->>Map: responseGroupedByMonth = dayResponsesMap.values().stream()...
+    PopulateResponseComponent->>Map: responseGroupedByMonth.forEach((gc, dr) -> {...})
+
+    PopulateResponseComponent->>List: monthResponses.add(monthResponse)
+    PopulateResponseComponent->>List: return monthResponses

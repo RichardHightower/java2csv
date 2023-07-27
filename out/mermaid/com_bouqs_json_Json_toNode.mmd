@@ -1,0 +1,21 @@
+sequenceDiagram
+    participant com.bouqs.json.Json
+    participant getMapper()
+    participant JsonProcessingException
+    participant JsonException
+    participant JsonNode
+    
+    Note over com.bouqs.json.Json: Create Json object
+    
+    com.bouqs.json.Json->>getMapper(): Retrieve mapper
+    getMapper()-->>com.bouqs.json.Json: Return mapper
+    
+    Note over com.bouqs.json.Json: Parse JSON to JsonNode
+    
+    com.bouqs.json.Json->>getMapper(): Read JSON tree
+    getMapper()-->>JsonNode: Return JsonNode
+    alt Successful parsing
+        JsonNode-->>com.bouqs.json.Json: Return JsonNode
+    else Parsing error
+        JsonProcessingException-->>JsonException: Throw JsonException
+    end

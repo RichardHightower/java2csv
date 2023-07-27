@@ -1,0 +1,91 @@
+---title: Package com.bouqs.offerservice.util
+classDiagram
+    class PopulateResponseComponent{
+        -Logger log
+        -String nextPageHostname
+        -MaterialDao materialDao
+        -MaterialOfferDao materialOfferDao
+    }
+    
+    class ErrorMessages{
+        +FACILITY_ID_NOT_NULL
+        +SHIP_DATE_NOT_NULL
+        +SKU_ID_NOT_NULL
+        +PRODUCT_ID_NOT_NULL
+        +OFBIZ_ID_ID_NOT_NULL
+        +ECOM_ID_NOT_NULL
+        +CARRIER_MEtHOD_ID_NOT_NULL
+        +SHIP_METHOD_ID_NOT_NULL
+        +REGION_ID_NOT_NULL
+        +MATERIAL_ID_NOT_NULL
+        +INVENTORY_LOT_ID_NOT_NULL
+        +TIMESTAMP_NOT_NULL
+    }
+    
+    class Utils{
+        -Logger log
+    }
+    
+    class TimeRecorder{
+        -long startTime
+    }
+    
+    class Constants{
+        +MAXIMUM_DAYS
+        +INITIAL_VERSION
+        +DELIMITER_REDIS
+        +DELIMITER_DYNAMODB
+        +DELIMITER_TIME
+        +DATE_TIME_FORMATTER
+        +DATE_FORMATTER
+        +DEFAULT_TIMEZONE
+        +NUMBER_DELIVERY_DATE
+        +NUMBER_SHIP_DATE
+        +NUMBER_TIMESTAMP
+        +DEFAULT_PAGE_STR
+        +DEFAULT_PAGE_SIZE_STR
+        +OFFER_AVAILABILITY_TYPE_SKU
+        +OFFER_AVAILABILITY_TYPE_OFBIZ
+        +ELASTICACHE_REDIS_CLUSTER_ENDPOINT
+        +ELASTICACHE_REDIS_CLUSTER_PORT
+        +GET_DAILY_PRODUCT_AVAILABILITY_TIME
+        +GET_PRODUCT_AVAILABILITY_TIME
+        +VALIDATE_CART_TIME
+        +GET_OFFER_AVAILABILITY_REGION_TIME
+        +GET_FACILITY_DELIVERY_WINDOW_SHIP_METHOD_TIME
+        +GET_OFFER_TIME
+        +CREATE_OFFER_TIME
+        +REINDEX_DATA_TIME
+        +UPDATE_OFFER_TIME
+        +DELETE_OFFER_TIME
+        +SYNC_OFFER_TIME
+        +SYNC_UPDATER_OFFER_TIME
+        +SYNC_UPDATER_USAGE_TIME
+        +GET_MATERIAL_TIME
+        +CREATE_MATERIAL_TIME
+        +UPDATE_MATERIAL_TIME
+        +DELETE_MATERIAL_TIME
+        +GET_MATERIAL_OFFER_TIME
+        +DELETE_MATERIAL_OFFER_TIME
+        +SYNC_MATERIAL_TIME
+        +LOG_ATTR_REQ_ID
+        +LOG_ATTR_REQ_ECOM_ID
+        +LOG_ATTR_REQ_REGION_ID
+        +LOG_ATTR_REQ_FACILITY_ID
+        +LOG_ATTR_REQ_SHIP_METHOD_ID
+        +LOG_ATTR_REQ_MATERIAL_ID
+        +LOG_ATTR_REQ_SKU_ID
+        +LOG_ATTR_REQ_CARRIER_METHOD_ID
+        +LOG_ATTR_REQ_DELIVERY_DATE
+        +LOG_ATTR_REQ_PRODUCT_IDS
+        +LOG_ATTR_REQ_FROM_DATE
+        +LOG_ATTR_REQ_TO_DATE
+        +LOG_ATTR_REQ_ZIP_CODE
+    }
+    
+    PopulateResponseComponent -- Constants
+    PopulateResponseComponent -- Utils
+    PopulateResponseComponent -- TimeRecorder
+    PopulateResponseComponent -- ErrorMessages: has-a
+    PopulateResponseComponent o-- "*" MaterialDao: has-many
+    PopulateResponseComponent o-- "*" MaterialOfferDao: has-many
