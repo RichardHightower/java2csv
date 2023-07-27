@@ -14,6 +14,14 @@ class AvoidNotesRuleTest {
     }
 
     @Test
+    public void testVariant() {
+        Rule rule = new AvoidNotesRule();
+        String line = "Note over ObjectMapper,JsonException: Handle error if IOException occurs.";
+        RuleResult result = rule.check(line, 1);
+        assertNotEquals(RuleResult.SUCCESS, result);
+    }
+
+    @Test
     public void testRegularLine() {
         Rule rule = new AvoidNotesRule();
         String line = "Alice->Bob: Hello";

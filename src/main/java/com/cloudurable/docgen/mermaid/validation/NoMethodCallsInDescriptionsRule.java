@@ -5,7 +5,7 @@ import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
 public class NoMethodCallsInDescriptionsRule implements Rule {
-    private final Pattern PATTERN = Pattern.compile(":\\s*\\w+\\s*\\(.*\\)"); // matches ": methodName(...)"
+    private final Pattern PATTERN = Pattern.compile("(?<=:).*\\b\\w+\\s*\\(.*\\)"); // matches "methodName(...)" anywhere after a colon
     private final String RULE_NAME = "No Method Calls In Descriptions Rule";
     private final String RULE_DESCRIPTION = "No method calls in descriptions. Instead of 'Foo -> Bar : getFooBar()', use 'Foo -> Bar : Getting some foo from bar'.";
 

@@ -32,18 +32,24 @@ public class RuleRunner {
 
     public List<RuleResult> checks(List<String> lines) {
         List<RuleResult> results = new ArrayList<>();
-        int lineNumber = 0;
-        for (String line : lines) {
-            for (Rule rule : rules) {
-                RuleResult result = rule.check(line, lineNumber);
+        for (int i = 0; i < lines.size(); i++) {
+            final var line = lines.get(i);
+            List<RuleResult> lineResults = runRuleForLine(i, line);
+            results.addAll(lineResults);
+        }
+        return results;
+    }
 
-                if (result != RuleResult.SUCCESS) {
-                    results.add(result);
-                    //System.out.printf("%s %s %s %d %s\n", rule.getClass().getSimpleName(), result.getRuleName(), line, lineNumber, result == RuleResult.SUCCESS ? "success" : results);
-                }
+    private List<RuleResult> runRuleForLine(int i, String line) {
+        List<RuleResult> results = new ArrayList<>();
+        for (Rule rule : rules) {
+            RuleResult result = rule.check(line, i);
 
+            if (result != RuleResult.SUCCESS) {
+                results.add(result);
+                //System.out.printf("%s %s %s %d %s\n", rule.getClass().getSimpleName(), result.getRuleName(), line, lineNumber, result == RuleResult.SUCCESS ? "success" : results);
             }
-            lineNumber++;
+
         }
         return results;
     }

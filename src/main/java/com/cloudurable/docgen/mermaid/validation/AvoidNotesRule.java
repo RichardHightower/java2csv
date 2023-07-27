@@ -5,7 +5,7 @@ import java.util.regex.Pattern;
 
 public class AvoidNotesRule implements Rule {
 
-    private final Pattern PATTERN = Pattern.compile("^\\sNote\\b");
+    private final Pattern PATTERN = Pattern.compile("^\\s*Note\\b");
 
     private final String RULE_NAME = "Avoid Notes Rule";
     private final String RULE_DESCRIPTION = "Do not include notes in the diagram. Encapsulate all necessary information within interaction sequence.";

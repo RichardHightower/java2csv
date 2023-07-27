@@ -462,9 +462,12 @@ public class DocGenerator {
     }
 
 
+
     public void runMethodGen() throws IOException {
 
 
+
+        final var mermaidSequenceGen = new  MethodMermaidSequenceGen();
 
         File outputDir = new File(outputFile).getParentFile();
         outputDir.mkdirs();
@@ -485,7 +488,7 @@ public class DocGenerator {
                         .forEach(javaClass -> {
                                     createMethodFilter(javaItems, javaClass)
                                             .forEach(javaMethod -> {
-                                                String sequenceDiagram = sequenceDiagramGen(mermaid, images, javaClass, javaMethod, "");
+                                                String sequenceDiagram = mermaidSequenceGen.generateSequenceFromMethod(javaMethod.getBody());
                                                 System.out.println(sequenceDiagram);
                                             });
                                 }
