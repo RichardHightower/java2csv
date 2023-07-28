@@ -1,9 +1,0 @@
-sequenceDiagram
-    participant MaterialDaoImpl
-    participant Logger
-    participant MaterialRepository
-    
-    MaterialDaoImpl->>Logger: Log start of saveAll
-    MaterialDaoImpl->>Logger: Log materialEntities
-    MaterialDaoImpl->>MaterialRepository: Save all materialEntities
-    MaterialRepository-->>MaterialDaoImpl: Return saved materialEntities

@@ -1,9 +1,0 @@
-sequenceDiagram
-    participant RedisConfig
-    participant RedisTemplate
-    participant RedisConnectionFactory
-    
-    RedisConfig->>RedisTemplate: Create offerRedisTemplate bean
-    RedisTemplate->>RedisConnectionFactory: Set connection factory
-    RedisConnectionFactory-->>RedisTemplate: Return connection factory
-    RedisTemplate-->>RedisConfig: Return offerRedisTemplate bean
