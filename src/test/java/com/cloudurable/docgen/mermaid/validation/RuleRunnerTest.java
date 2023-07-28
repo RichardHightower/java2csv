@@ -16,7 +16,7 @@ public class RuleRunnerTest {
 
     @BeforeEach
     void setUp() {
-        List<Rule> rules = new ArrayList<>();
+        List<LineRule> rules = new ArrayList<>();
         rules.add(new AvoidNotesRule());
         rules.add(new NoMethodCallsInDescriptionsRule());
         rules.add(new AvoidActivateDeactivateRule());
@@ -35,7 +35,7 @@ public class RuleRunnerTest {
                 "Alice-->Bob: How are you?",
                 "Bob->Alice: I'm fine, thank you!"
         );
-        List<RuleResult> results = ruleRunner.checks(lines);
+        List<RuleResult> results = ruleRunner.checkLines(lines);
 
         for (RuleResult result : results) {
             assertEquals(RuleResult.SUCCESS, result);
@@ -52,7 +52,7 @@ public class RuleRunnerTest {
                 "System.out.println(\"Hello world!\");",
                 "participant List as ListAlias"
         );
-        List<RuleResult> results = ruleRunner.checks(lines);
+        List<RuleResult> results = ruleRunner.checkLines(lines);
 
         for (RuleResult result : results) {
             assertNotEquals(RuleResult.SUCCESS, result);
@@ -62,10 +62,43 @@ public class RuleRunnerTest {
     }
 
     @Test
+    void sampleTestCase() {
+
+        String[] lineArray = (" sequenceDiagram\n" +
+                "    participant Caller\n" +
+                "    participant JsonConverter\n" +
+                "    participant ObjectMapper\n" +
+                "    participant JsonException\n" +
+                "\n" +
+                "    Caller->>JsonConverter: Call toNode() with JSON string\n" +
+                "    JsonConverter->>ObjectMapper: Call readTree() with JSON string\n" +
+                "    alt JSON parsing successful\n" +
+                "        ObjectMapper-->>JsonConverter: Return parsed JSON as JsonNode\n" +
+                "        JsonConverter-->>Caller: Return parsed JSON as JsonNode\n" +
+                "    else JSON parsing failed\n" +
+                "        ObjectMapper-->>JsonConverter: Throw JsonProcessingException\n" +
+                "        JsonConverter->>JsonException: Throw JsonException\n" +
+                "        JsonException-->>Caller: Throw JsonException\n" +
+                "    end").split("\n");
+
+        List<String> lines = List.of(lineArray);
+        List<RuleResult> results = ruleRunner.checkLines(lines);
+
+        for (RuleResult result : results) {
+            System.out.println(result.getDescription());
+            System.out.println(result.getRuleName());
+            System.out.println("VIOLATED LINE:" + result.getViolatedLine());
+            assertNotEquals(RuleResult.SUCCESS, result);
+        }
+
+        //System.out.println(ruleRunner.checksAndReturnJson(lines));
+    }
+
+    @Test
     public void testRuleRunnerChecks() {
         // Mock two rules
-        Rule rule1 = mock(Rule.class);
-        Rule rule2 = mock(Rule.class);
+        LineRule rule1 = mock(LineRule.class);
+        LineRule rule2 = mock(LineRule.class);
 
         // Mock the return values for the rules
         when(rule1.check(anyString(), anyInt())).thenReturn(RuleResult.SUCCESS);
@@ -80,7 +113,7 @@ public class RuleRunnerTest {
         List<String> lines = Arrays.asList("line1", "line2", "line3");
 
         // Run the checks
-        List<RuleResult> results = ruleRunner.checks(lines);
+        List<RuleResult> results = ruleRunner.checkLines(lines);
 
         // Validate the results
         assertEquals(0, results.size()); // Two rules times three lines should give six results

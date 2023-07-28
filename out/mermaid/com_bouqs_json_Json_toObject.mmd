@@ -1,0 +1,9 @@
+sequenceDiagram
+    participant User
+    participant ObjectMapper
+    participant JsonException
+    
+    User->>ObjectMapper: Call toObject method
+    ObjectMapper->>JsonException: Handle error if JSON parsing fails
+    JsonException-->>User: Throw JsonException if error occurs
+    ObjectMapper-->>User: Return parsed object if successful

@@ -1,0 +1,19 @@
+---
+title: productIdDeliveryDateRegionIdKey (Utils)
+---
+
+sequenceDiagram
+    participant Utils
+    participant StringJoiner
+    participant Constants
+
+    Utils->>StringJoiner: Create StringJoiner object
+    StringJoiner->>Utils: Return StringJoiner object
+    Utils->>Constants: Access DELIMITER_REDIS constant
+    Utils->>Utils: Normalize productId
+    Utils->>StringJoiner: Add normalized productId
+    Utils->>StringJoiner: Add deliveryDate
+    Utils->>StringJoiner: Add regionId
+    StringJoiner->>Utils: Return joined string
+    Utils->>Utils: Enclose joined string in curly braces
+    Utils-->>Utils: Return final key

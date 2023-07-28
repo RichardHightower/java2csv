@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant RedisConfig
+    participant ClusterTopologyRefreshOptions
+    participant GenericObjectPoolConfig
+    participant LettuceClientConfiguration
+    participant LettuceConnectionFactory
+    participant ClusterClientOptions
+    
+    RedisConfig->>ClusterTopologyRefreshOptions: Create cluster topology refresh options
+    RedisConfig->>GenericObjectPoolConfig: Create generic object pool config
+    RedisConfig->>LettuceClientConfiguration: Create lettuce client configuration
+    RedisConfig->>LettuceConnectionFactory: Create lettuce connection factory
+    RedisConfig->>ClusterClientOptions: Create cluster client options
+    RedisConfig->>LettuceConnectionFactory: Return lettuce connection factory

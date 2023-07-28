@@ -1,0 +1,18 @@
+---
+title: facilityIdShipMethodIdKey (Utils)
+---
+
+sequenceDiagram
+    participant Utils
+    participant StringJoiner
+    participant Constants
+    
+    Note over Utils: facilityIdShipMethodIdKey method
+    
+    Utils->>StringJoiner: Create StringJoiner
+    StringJoiner->>Constants: Get DELIMITER_REDIS
+    Constants-->>StringJoiner: Return DELIMITER_REDIS
+    StringJoiner->>StringJoiner: Add facilityId
+    StringJoiner->>StringJoiner: Add shipMethodId
+    StringJoiner->>String: Convert to String
+    String-->>Utils: Return key

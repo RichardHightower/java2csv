@@ -4,7 +4,7 @@ package com.cloudurable.docgen.mermaid.validation;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
-public class SystemOutRule implements Rule {
+public class SystemOutRule implements LineRule {
     private final Pattern PATTERN = Pattern.compile("System\\.out");
     private final String RULE_NAME = "System Out Rule";
     private final String RULE_DESCRIPTION = "Avoid using System.out in your code.";

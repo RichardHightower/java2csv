@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant OfferServiceImpl
+    participant WebClientService
+    participant Utils
+    participant RegionResponse
+    participant OfferDao
+    participant OfferEntity
+    participant PopulateResponseComponent
+    participant OfferResponse
+
+    OfferServiceImpl->>WebClientService: getRegionsByDesZipCode(zipCode)
+    WebClientService-->>OfferServiceImpl: Return regionResponses
+    OfferServiceImpl->>Utils: buildRegionId(shipMethodId, region, days)
+    Utils-->>OfferServiceImpl: Return regionIds
+    OfferServiceImpl->>OfferDao: findByOfbizIdDeliveryDateRegionId(skuOrOfbizId, deliveryDate, deliveryDate, nestedRegionId)
+    OfferServiceImpl->>OfferDao: findByEcomIdDeliveryDateRegionId(skuOrOfbizId, deliveryDate, deliveryDate, nestedRegionId)
+    OfferDao-->>OfferServiceImpl: Return offerEntities
+    OfferServiceImpl->>OfferDao: findAllById(a)
+    OfferDao-->>OfferServiceImpl: Return offerEntities
+    OfferServiceImpl->>PopulateResponseComponent: populateMaterialForOffers(offerEntities)
+    PopulateResponseComponent-->>OfferServiceImpl: Return offerResponses
+    OfferServiceImpl->>OfferResponse: getAvailableUnits()
+    OfferResponse-->>OfferServiceImpl: Return offerResponses

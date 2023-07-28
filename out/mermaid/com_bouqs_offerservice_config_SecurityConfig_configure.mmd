@@ -1,0 +1,15 @@
+---
+title: Configure Security
+---
+
+sequenceDiagram
+    participant HttpSecurity
+    participant authorizeRequests
+    participant csrf
+    
+    Note over HttpSecurity: configure(HttpSecurity http)
+    
+    HttpSecurity->>authorizeRequests: authorizeRequests()
+    authorizeRequests->>HttpSecurity: anyRequest().permitAll()
+    HttpSecurity->>csrf: csrf()
+    csrf->>HttpSecurity: disable()

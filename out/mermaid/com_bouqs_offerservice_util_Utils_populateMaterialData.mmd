@@ -1,0 +1,15 @@
+---
+title: populateMaterialData (Utils)
+---
+
+sequenceDiagram
+    participant existedEntity
+    participant insertingEntity
+
+    existedEntity->>existedEntity: setCapacityUsage(insertingEntity.getCapacityUsage())
+    existedEntity->>existedEntity: setBaseAPD(insertingEntity.getBaseAPD())
+    existedEntity->>existedEntity: setInventoryLotCapacity(insertingEntity.getInventoryLotCapacity())
+    existedEntity->>existedEntity: setTimestamp(insertingEntity.getTimestamp())
+    existedEntity->>existedEntity: setInventoryLotStart(insertingEntity.getInventoryLotStart())
+    existedEntity->>existedEntity: setInventoryLotEnd(insertingEntity.getInventoryLotEnd())
+    existedEntity-->>existedEntity: Return updated existedEntity

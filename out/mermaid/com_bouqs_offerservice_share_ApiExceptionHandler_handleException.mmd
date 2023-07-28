@@ -1,0 +1,25 @@
+---
+title: Handle Exception (ApiExceptionHandler)
+---
+
+sequenceDiagram
+    participant Exception
+    participant List
+    participant log
+    participant ApiError
+    participant LocalDateTime
+    participant HttpStatus
+    participant ResponseEntityBuilder
+    participant ResponseEntity
+    
+    Exception->>List: Create details list
+    List-->>Exception: Return details list
+    Exception->>log: Log error message
+    log-->>Exception: Return logged error message
+    LocalDateTime-->>ApiError: Get current date and time
+    HttpStatus-->>ApiError: Set HTTP status code
+    ApiError->>List: Set error details
+    List-->>ApiError: Return error details
+    ApiError-->>ResponseEntityBuilder: Build response entity
+    ResponseEntityBuilder-->>ResponseEntity: Return response entity
+    ResponseEntity-->>Exception: Return response entity

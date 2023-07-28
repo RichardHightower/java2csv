@@ -1,0 +1,22 @@
+sequenceDiagram
+    participant OfferController
+    participant log
+    participant metricService
+    participant MDC
+    participant offerService
+    participant ResourceNotFoundException
+    participant CRUDResponse
+    participant HttpStatus
+    
+    OfferController->>log: Start deleteOffer
+    OfferController->>metricService: Increment DELETE_OFFER_REQUEST metric
+    OfferController->>MDC: Put LOG_ATTR_REQ_ID
+    OfferController->>offerService: deleteByOfferId(offerId)
+    offerService->>CRUDResponse: Delete offer
+    offerService->>metricService: Increment DELETE_OFFER_SUCCESS metric
+    offerService-->>OfferController: Return offerResponse
+    OfferController->>HttpStatus: Return ResponseEntity
+    ResourceNotFoundException->>metricService: Increment DELETE_OFFER_EXCEPTION metric
+    ResourceNotFoundException->>metricService: Increment DELETE_OFFER_FAIL metric
+    ResourceNotFoundException-->>OfferController: Throw exception
+    OfferController->>MDC: Clear

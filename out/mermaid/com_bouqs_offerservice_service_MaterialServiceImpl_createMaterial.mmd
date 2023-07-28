@@ -1,0 +1,25 @@
+sequenceDiagram
+    participant MaterialServiceImpl
+    participant MaterialRequest
+    participant log
+    participant MaterialEntity
+    participant populateMaterialEntity
+    participant json
+    participant materialDao
+    participant CRUDResponse
+    
+    MaterialServiceImpl->>log: Start createMaterial
+    MaterialServiceImpl->>MaterialRequest: Create MaterialRequest object
+    MaterialServiceImpl->>populateMaterialEntity: Populate MaterialEntity object
+    populateMaterialEntity->>MaterialRequest: Get data from MaterialRequest
+    populateMaterialEntity->>MaterialEntity: Set data in MaterialEntity
+    MaterialServiceImpl->>log: Log materialEntity
+    log->>json: Convert materialEntity to JSON
+    MaterialServiceImpl->>materialDao: Save materialEntity
+    materialDao-->>MaterialServiceImpl: Return createdMaterialEntity
+    MaterialServiceImpl->>log: End createMaterial
+    MaterialServiceImpl->>CRUDResponse: Create CRUDResponse object
+    CRUDResponse->>createdMaterialEntity: Set id from createdMaterialEntity
+    CRUDResponse->>CRUDResponse: Set success message
+    CRUDResponse->>CRUDResponse: Set success status
+    MaterialServiceImpl-->>CRUDResponse: Return CRUDResponse

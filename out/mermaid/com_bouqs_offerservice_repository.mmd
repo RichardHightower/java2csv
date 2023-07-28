@@ -1,0 +1,58 @@
+---
+title: Package com.bouqs.offerservice.repository
+---
+classDiagram
+    class MaterialOfferRepository {
+    }
+
+    class OfferRepository {
+    }
+
+    class MaterialDaoImpl {
+        -Logger log
+        -static Json json
+        -MaterialRepository materialRepository
+        -RedisTemplate<String, String> redisTemplate
+    }
+
+    class SynchronizationDao {
+    }
+
+    class MaterialRepository {
+    }
+
+    class OfferDaoImpl {
+        -Logger log
+        -static Json json
+        -OfferRepository offerRepository
+        -RedisTemplate<String, String> redisTemplate
+    }
+
+    class MaterialOfferDao {
+    }
+
+    class MaterialDao {
+    }
+
+    class MaterialOfferDaoImpl {
+        -Logger log
+        -static Json json
+        -MaterialOfferRepository materialOfferRepository
+        -RedisTemplate<String, String> redisTemplate
+    }
+
+    class OfferDao {
+    }
+
+    class SynchronizationDaoImpl {
+        -Logger log
+        -OfferDao offerDao
+        -MaterialDao materialDao
+        -MaterialOfferDao materialOfferDao
+    }
+
+    MaterialOfferRepository <|.. MaterialOfferDaoImpl
+    OfferRepository <|.. OfferDaoImpl
+    MaterialDao <|.. MaterialDaoImpl
+    MaterialRepository <|.. MaterialDaoImpl
+    SynchronizationDao <|.. SynchronizationDaoImpl

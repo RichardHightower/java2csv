@@ -1,0 +1,26 @@
+sequenceDiagram
+    participant OfferServiceImpl
+    participant SynchronizationDao
+    participant CRUDResponse
+    participant SyncUpdaterResponse
+    participant MaterialEntity
+    participant MaterialOfferEntity
+    participant OfferEntity
+    participant ResourceNotFoundException
+    
+    OfferServiceImpl->>SynchronizationDao: syncData(...)
+    SynchronizationDao-->>OfferServiceImpl: isSuccess
+    OfferServiceImpl->>OfferServiceImpl: populateMaterialResponse(...)
+    OfferServiceImpl->>OfferServiceImpl: populateMaterialOfferResponse(...)
+    OfferServiceImpl->>OfferServiceImpl: populateOfferResponse(...)
+    OfferServiceImpl-->>SyncUpdaterResponse: createMaterialResponses
+    OfferServiceImpl-->>SyncUpdaterResponse: createMaterialOfferResponses
+    OfferServiceImpl-->>SyncUpdaterResponse: createOfferResponses
+    OfferServiceImpl-->>SyncUpdaterResponse: updateMaterialResponses
+    OfferServiceImpl-->>SyncUpdaterResponse: updateMaterialOfferResponses
+    OfferServiceImpl-->>SyncUpdaterResponse: updateOfferResponses
+    OfferServiceImpl-->>SyncUpdaterResponse: deleteMaterialResponses
+    OfferServiceImpl-->>SyncUpdaterResponse: deleteMaterialOfferResponses
+    OfferServiceImpl-->>SyncUpdaterResponse: deleteOfferResponses
+    OfferServiceImpl-->>ResourceNotFoundException: Exception
+    OfferServiceImpl-->>SyncUpdaterResponse: SyncUpdaterResponse

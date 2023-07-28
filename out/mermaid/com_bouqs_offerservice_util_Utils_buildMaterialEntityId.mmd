@@ -1,0 +1,22 @@
+---
+title: buildMaterialEntityId (Utils)
+---
+
+sequenceDiagram
+    participant Utils
+    participant StringJoiner
+    participant Constants
+    participant StringUtils
+
+    Utils->>StringJoiner: Create StringJoiner
+    Utils->>StringUtils: Check if inventoryLotId is empty
+    StringUtils-->>Utils: Return boolean value
+    alt inventoryLotId is not empty
+        Utils->>joiner: Add materialId
+        Utils->>joiner: Add inventoryLotId
+    else inventoryLotId is empty
+        Utils->>joiner: Add materialId
+    end
+    Utils-->>joiner: Return StringJoiner
+    joiner-->>Utils: Return joined string
+    Utils-->>Utils: Return material entity ID

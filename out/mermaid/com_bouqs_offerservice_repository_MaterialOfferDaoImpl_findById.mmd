@@ -1,0 +1,13 @@
+---
+title: findById (MaterialOfferDaoImpl)
+---
+
+sequenceDiagram
+    participant MaterialOfferDaoImpl
+    participant log
+    participant materialOfferRepository
+    
+    MaterialOfferDaoImpl->>log: Start findById
+    MaterialOfferDaoImpl->>log: materialOfferId: {id}
+    MaterialOfferDaoImpl->>materialOfferRepository: findById(id)
+    materialOfferRepository-->>MaterialOfferDaoImpl: Return Optional<MaterialOfferEntity>

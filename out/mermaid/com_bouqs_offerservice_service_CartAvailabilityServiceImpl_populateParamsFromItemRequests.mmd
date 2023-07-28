@@ -1,0 +1,39 @@
+sequenceDiagram
+    participant CartAvailabilityServiceImpl
+    participant CartItemRequest
+    participant Map
+    participant log
+    participant Instant
+    participant Set
+    participant LocalDate
+    participant String
+    participant List
+    participant Stream
+    participant Optional
+    participant Triple
+    participant Collections
+    participant Collectors
+    
+    Note over CartAvailabilityServiceImpl: populateParamsFromItemRequests
+    
+    CartAvailabilityServiceImpl->>log: Start populateParamsFromItemRequests
+    CartAvailabilityServiceImpl->>Instant: Get current time
+    Instant-->>CartAvailabilityServiceImpl: Return current time
+    CartAvailabilityServiceImpl->>Set: Create empty set
+    CartAvailabilityServiceImpl->>CartItemRequest: Iterate over cart item requests
+    CartItemRequest->>CartItemRequest: Get delivery date
+    CartItemRequest->>CartItemRequest: Get destination postal code
+    CartAvailabilityServiceImpl->>Map: Get region IDs by postal code
+    Map-->>CartAvailabilityServiceImpl: Return region IDs
+    CartItemRequest->>CartItemRequest: Get primary product
+    CartItemRequest->>Optional: Get add-on products
+    Optional-->>CartItemRequest: Return add-on products
+    CartItemRequest->>Stream: Concatenate primary product and add-on products
+    Stream->>regionIds: Iterate over region IDs
+    regionIds->>Triple: Create triple with delivery date, SKU, and region ID
+    Triple-->>Stream: Return triple
+    Stream-->>Set: Collect triples into set
+    Set-->>CartAvailabilityServiceImpl: Return set
+    CartAvailabilityServiceImpl->>log: End populateParamsFromItemRequests With Total Time : <duration>ms
+    log-->>CartAvailabilityServiceImpl: Return success status
+    CartAvailabilityServiceImpl-->>CartAvailabilityServiceImpl: Return set

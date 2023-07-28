@@ -1,0 +1,17 @@
+---
+title: init (MetricsConfig)
+---
+
+sequenceDiagram
+    participant MetricsConfig
+    participant applicationContext
+    participant MeterRegistry
+    participant log
+    participant environment
+    
+    MetricsConfig->>applicationContext: Get MeterRegistry bean
+    MetricsConfig->>log: Trace log message
+    MetricsConfig->>environment: Get environment
+    MetricsConfig->>Metric: Iterate over Metric values
+    Metric->>MeterRegistry: Build Counter with label
+    MeterRegistry-->>Metric: Register Counter

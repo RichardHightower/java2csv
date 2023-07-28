@@ -1,0 +1,61 @@
+---
+title: populateOfferData (Utils)
+---
+
+sequenceDiagram
+    participant existedEntity
+    participant insertingEntity
+    participant StringUtils
+    participant OfferEntity
+
+    alt isUpdaterUsage is true
+        existedEntity->>insertingEntity: getFacilityCapacityUsage()
+        insertingEntity->>existedEntity: setFacilityCapacityUsage()
+        existedEntity->>insertingEntity: getCarrierMethodCapacityUsage()
+        insertingEntity->>existedEntity: setCarrierMethodCapacityUsage()
+    else
+        existedEntity->>StringUtils: isNotEmpty(insertingEntity.getOfbizId())
+        StringUtils-->>existedEntity: return true
+        existedEntity->>insertingEntity: getOfbizId()
+        insertingEntity->>existedEntity: setOfbizId()
+        existedEntity->>StringUtils: isNotEmpty(insertingEntity.getProductId())
+        StringUtils-->>existedEntity: return true
+        existedEntity->>insertingEntity: getProductId()
+        insertingEntity->>existedEntity: setProductId()
+        existedEntity->>StringUtils: isNotEmpty(insertingEntity.getEcomId())
+        StringUtils-->>existedEntity: return true
+        existedEntity->>insertingEntity: getEcomId()
+        insertingEntity->>existedEntity: setEcomId()
+        existedEntity->>insertingEntity: getDeliveryDate()
+        insertingEntity->>existedEntity: setDeliveryDate()
+        existedEntity->>StringUtils: isNotEmpty(insertingEntity.getCutoff())
+        StringUtils-->>existedEntity: return true
+        existedEntity->>insertingEntity: getCutoff()
+        insertingEntity->>existedEntity: setCutoff()
+        existedEntity->>insertingEntity: getFacilityCapacity()
+        insertingEntity->>existedEntity: setFacilityCapacity()
+        existedEntity->>insertingEntity: getCarrierMethodCapacity()
+        insertingEntity->>existedEntity: setCarrierMethodCapacity()
+        existedEntity->>insertingEntity: getPriority()
+        insertingEntity->>existedEntity: setPriority()
+        existedEntity->>insertingEntity: getFacilityRanking()
+        insertingEntity->>existedEntity: setFacilityRanking()
+        existedEntity->>insertingEntity: getProductionLeadTime()
+        insertingEntity->>existedEntity: setProductionLeadTime()
+        existedEntity->>insertingEntity: getEssentialMaterialIds()
+        insertingEntity->>existedEntity: setEssentialMaterialIds()
+        existedEntity->>insertingEntity: getTimestamp()
+        insertingEntity->>existedEntity: setTimestamp()
+        existedEntity->>insertingEntity: getAirSectors()
+        insertingEntity->>existedEntity: setAirSectors()
+        existedEntity->>insertingEntity: getDeliveryWindows()
+        insertingEntity->>existedEntity: setDeliveryWindows()
+        existedEntity->>insertingEntity: getOfbizFacilityId()
+        insertingEntity->>existedEntity: setOfbizFacilityId()
+        existedEntity->>insertingEntity: getFacilityName()
+        insertingEntity->>existedEntity: setFacilityName()
+        existedEntity->>insertingEntity: getShipMethodName()
+        insertingEntity->>existedEntity: setShipMethodName()
+    end
+
+    existedEntity-->>OfferEntity: return existedEntity

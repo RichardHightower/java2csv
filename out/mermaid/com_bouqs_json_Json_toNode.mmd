@@ -1,0 +1,16 @@
+---
+title: toNode (Json)
+---
+
+sequenceDiagram
+    participant Caller
+    participant JsonNode
+    participant ObjectMapper
+    participant JsonException
+
+    Caller->>ObjectMapper: readTree(json)
+    alt Success
+        ObjectMapper-->>JsonNode: Return JsonNode
+    else Error
+        ObjectMapper-->>JsonException: Throw JsonException
+    end

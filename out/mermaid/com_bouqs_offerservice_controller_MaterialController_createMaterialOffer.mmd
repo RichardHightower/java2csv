@@ -1,0 +1,22 @@
+---
+title: createMaterialOffer (MaterialController)
+---
+
+sequenceDiagram
+    participant MaterialController
+    participant MaterialOfferRequest
+    participant log
+    participant metricService
+    participant MaterialService
+    participant CRUDResponse
+    participant ResponseEntity
+    participant HttpStatus
+    
+    MaterialController->>log: Start createMaterialOffer
+    MaterialController->>metricService: Increment CREATE_MATERIAL_REQUEST metric
+    MaterialController->>MaterialService: Create material offer
+    MaterialService->>CRUDResponse: Create material offer
+    MaterialController->>metricService: Increment CREATE_MATERIAL_SUCCESS metric
+    MaterialController->>ResponseEntity: Create ResponseEntity
+    ResponseEntity->>HttpStatus: Set HttpStatus to OK
+    ResponseEntity-->>MaterialController: Return ResponseEntity

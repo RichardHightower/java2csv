@@ -1,0 +1,47 @@
+---
+title: Package com.bouqs.offerservice.controller
+---
+classDiagram
+    class OfferController{
+        -Logger log
+        -OfferService offerService
+        -MetricService metricService
+    }
+
+    class MaterialOfferController{
+        -Logger log
+        -OfferService offerService
+        -MetricService metricService
+    }
+
+    class MaterialController{
+        -Logger log
+        -MaterialService materialService
+        -MetricService metricService
+    }
+
+    class OfferAvailabilityController{
+        -Logger log
+        -Json json
+        -OfferAvailabilityService offerAvailabilityService
+        -CartAvailabilityService cartAvailabilityService
+        -MetricService metricService
+    }
+
+    class HomeController{
+    }
+
+    OfferController "1" -- "1" Logger: has-a
+    OfferController "1" -- "1" OfferService: has-a
+    OfferController "1" -- "1" MetricService: has-a
+    MaterialOfferController "1" -- "1" Logger: has-a
+    MaterialOfferController "1" -- "1" OfferService: has-a
+    MaterialOfferController "1" -- "1" MetricService: has-a
+    MaterialController "1" -- "1" Logger: has-a
+    MaterialController "1" -- "1" MaterialService: has-a
+    MaterialController "1" -- "1" MetricService: has-a
+    OfferAvailabilityController "1" -- "1" Logger: has-a
+    OfferAvailabilityController "1" -- "1" Json: has-a
+    OfferAvailabilityController "1" -- "1" OfferAvailabilityService: has-a
+    OfferAvailabilityController "1" -- "1" CartAvailabilityService: has-a
+    OfferAvailabilityController "1" -- "1" MetricService: has-a

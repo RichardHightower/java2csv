@@ -1,0 +1,15 @@
+---
+title: Save MaterialEntity
+---
+
+sequenceDiagram
+    participant MaterialDaoImpl
+    participant log
+    participant json
+    participant materialEntity
+    participant materialRepository
+    
+    MaterialDaoImpl->>log: Start save
+    MaterialDaoImpl->>log: materialEntity: {materialEntity}
+    MaterialDaoImpl->>materialRepository: save(materialEntity)
+    materialRepository-->>MaterialDaoImpl: Return saved materialEntity

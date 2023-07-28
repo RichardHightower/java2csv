@@ -1,0 +1,16 @@
+sequenceDiagram
+    participant ProceedingJoinPoint
+    participant CodeSignature
+    participant Object
+    participant String
+    participant Class
+    participant Instant
+    participant Logger
+    
+    ProceedingJoinPoint->>CodeSignature: getSignature()
+    CodeSignature->>String: getName()
+    CodeSignature->>Class: getDeclaringType()
+    Class-->>String: getSimpleName()
+    Instant->>Instant: now()
+    ProceedingJoinPoint->>Object: proceed()
+    Object->>Logger: debug()

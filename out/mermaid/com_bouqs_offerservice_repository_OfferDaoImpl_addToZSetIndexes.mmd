@@ -1,0 +1,12 @@
+sequenceDiagram
+    participant OfferEntity
+    participant redisTemplate
+    participant OfferIndex
+    
+    OfferEntity->>redisTemplate: Get delivery date
+    redisTemplate->>redisTemplate: Convert delivery date to epoch day
+    redisTemplate->>redisTemplate: Add to ZSet index ECOM_ID
+    redisTemplate->>redisTemplate: Add to ZSet index OFBIZ_ID
+    redisTemplate->>redisTemplate: Add to ZSet index REGION_ECOM_ID
+    redisTemplate->>redisTemplate: Add to ZSet index REGION_OFBIZ_ID
+    redisTemplate->>redisTemplate: Add to Set index FACILITY_SHIPMETHOD_ID

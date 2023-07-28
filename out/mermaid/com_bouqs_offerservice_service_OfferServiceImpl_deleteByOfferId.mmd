@@ -1,0 +1,10 @@
+sequenceDiagram
+    participant OfferServiceImpl
+    participant Log
+    participant OfferDao
+    participant CRUDResponse
+    
+    OfferServiceImpl->>Log: Start deleteByOfferId
+    OfferServiceImpl->>OfferDao: deleteById(offerId)
+    OfferServiceImpl->>Log: End deleteByOfferId
+    OfferServiceImpl-->>CRUDResponse: Return CRUDResponse

@@ -1,0 +1,19 @@
+sequenceDiagram
+    participant OfferServiceImpl
+    participant OfferRequest
+    participant log
+    participant OfferEntity
+    participant CRUDResponse
+    participant json
+    participant offerDao
+    
+    OfferServiceImpl->>log: Start createOffer
+    OfferServiceImpl->>OfferRequest: Populate offer entity
+    OfferRequest->>OfferEntity: Create offer entity
+    OfferServiceImpl->>log: Debug upsertingOfferEntity
+    log->>json: Convert upsertingOfferEntity to JSON
+    OfferServiceImpl->>offerDao: Save upsertingOfferEntity
+    offerDao-->>OfferEntity: Return createdOfferEntity
+    OfferEntity-->>CRUDResponse: Return CRUDResponse
+    CRUDResponse-->>OfferServiceImpl: Return CRUDResponse
+    OfferServiceImpl->>log: End createOffer

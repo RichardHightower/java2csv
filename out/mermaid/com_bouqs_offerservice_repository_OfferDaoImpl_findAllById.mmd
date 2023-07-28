@@ -1,0 +1,14 @@
+---
+title: findAllById (OfferDaoImpl)
+---
+
+sequenceDiagram
+    participant OfferDaoImpl
+    participant log
+    participant json
+    participant offerRepository
+    
+    OfferDaoImpl->>log: Start findAllById
+    OfferDaoImpl->>log: ids: [id1, id2, id3, ...]
+    OfferDaoImpl->>offerRepository: findAllById(ids)
+    offerRepository-->>OfferDaoImpl: Return Iterable<OfferEntity>

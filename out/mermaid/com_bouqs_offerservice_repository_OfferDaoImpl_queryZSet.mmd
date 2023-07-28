@@ -1,0 +1,35 @@
+sequenceDiagram
+    participant OfferDaoImpl
+    participant RedisTemplate
+    participant ZSetOperations
+    participant LocalDateTime
+    participant Optional
+    participant ZonedDateTime
+    participant ZoneId
+    participant Objects
+    participant ZoneId.systemDefault()
+    participant LocalDate
+    participant Map
+    participant Set
+    participant Stream
+    participant Collectors
+    participant log
+    
+    OfferDaoImpl->>RedisTemplate: opsForZSet()
+    RedisTemplate->>ZSetOperations: rangeByScoreWithScores(key, min, max)
+    ZSetOperations-->>RedisTemplate: Return tuples
+    RedisTemplate->>Optional: ofNullable(tuples)
+    Optional->>Optional: map(typedTuples -> ...)
+    Optional->>Stream: typedTuples.stream()
+    Stream->>Stream: filter(tuple -> ...)
+    Stream->>Map: map(tuple -> ...)
+    Map->>Collectors: groupingBy(...)
+    Collectors->>Map: Collectors.mapping(...)
+    Collectors->>Set: Collectors.toSet()
+    Map-->>OfferDaoImpl: Return result
+    OfferDaoImpl-->>Map: Return result
+    OfferDaoImpl->>log: Log error
+    log-->>OfferDaoImpl: Return result
+    RedisTemplate->>RedisTemplate: opsForZSet().remove(key, tuple.getValue())
+    RedisTemplate->>log: Log error
+    log-->>RedisTemplate: Return result

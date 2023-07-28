@@ -1,0 +1,9 @@
+sequenceDiagram
+    participant MaterialServiceImpl
+    participant MaterialOfferDao
+    participant CRUDResponse
+    
+    MaterialServiceImpl->>MaterialServiceImpl: deleteMaterialOfferById(materialOfferId)
+    MaterialServiceImpl->>MaterialServiceImpl: getMaterialOfferById(materialOfferId)
+    MaterialServiceImpl->>MaterialOfferDao: deleteById(materialOfferId)
+    MaterialServiceImpl->>CRUDResponse: Return CRUDResponse

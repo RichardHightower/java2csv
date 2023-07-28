@@ -1,0 +1,6 @@
+sequenceDiagram
+    participant OfferEntity
+    participant isAvailable
+    
+    OfferEntity->>isAvailable: Call isAvailable(offer)
+    isAvailable-->>OfferEntity: Return availability status

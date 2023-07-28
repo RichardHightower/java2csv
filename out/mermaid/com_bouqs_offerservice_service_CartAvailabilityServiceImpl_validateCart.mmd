@@ -1,0 +1,32 @@
+sequenceDiagram
+    participant CartAvailabilityServiceImpl
+    participant CartRequest
+    participant log
+    participant Pair
+    participant List
+    participant CartItemRequest
+    participant CartItemResponse
+    participant HashMap
+    participant CartResponse
+    participant ArrayList
+    participant validateDeliveryDateOfItemRequest
+    participant validateCartItemRequests
+    participant handleCartValidation
+    
+    CartAvailabilityServiceImpl->>log: Start validateCart
+    CartAvailabilityServiceImpl->>validateDeliveryDateOfItemRequest: validateDeliveryDateOfItemRequest(cartRequest.getItems())
+    validateDeliveryDateOfItemRequest->>Pair: Pair(invalidItems, validItems)
+    Pair-->>validateDeliveryDateOfItemRequest: validatedResult
+    validateDeliveryDateOfItemRequest->>validateCartItemRequests: validateCartItemRequests(validatedResult.getLeft(), new ArrayList<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>(), new HashMap<>())
+    validateCartItemRequests-->>validateDeliveryDateOfItemRequest: cartItemResponsesForInvalidDeliveryDate
+    validateDeliveryDateOfItemRequest->>handleCartValidation: handleCartValidation(validatedResult.getRight())
+    handleCartValidation-->>validateDeliveryDateOfItemRequest: cartItemResponsesForValidDeliveryDate
+    validateDeliveryDateOfItemRequest->>ArrayList: new ArrayList<>()
+    ArrayList-->>validateDeliveryDateOfItemRequest: cartItemResponsesForInvalidDeliveryDate
+    validateDeliveryDateOfItemRequest->>ArrayList: new ArrayList<>()
+    ArrayList-->>validateDeliveryDateOfItemRequest: cartItemResponsesForValidDeliveryDate
+    validateDeliveryDateOfItemRequest->>ArrayList: new ArrayList<>()
+    ArrayList-->>validateDeliveryDateOfItemRequest: cartItemResponses
+    validateDeliveryDateOfItemRequest->>log: End validateCart
+    CartAvailabilityServiceImpl->>log: cartItemResponses: json.toJson(cartItemResponses)
+    CartAvailabilityServiceImpl-->>CartResponse: CartResponse.builder().items(cartItemResponses).allValid(!cartItemResponses.isEmpty() && cartItemResponses.stream().allMatch(CartItemResponse::isItemValid)).build()

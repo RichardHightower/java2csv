@@ -1,0 +1,16 @@
+---
+title: facilityIdShipDateMaterialIdKey (Utils)
+---
+
+sequenceDiagram
+    participant Utils
+    participant StringJoiner
+    participant Constants
+
+    Utils->>StringJoiner: Create StringJoiner instance
+    StringJoiner->>Constants: Get DELIMITER_REDIS constant
+    StringJoiner->>StringJoiner: Add facilityId
+    StringJoiner->>StringJoiner: Add shipDate
+    StringJoiner->>StringJoiner: Add materialId
+    StringJoiner->>String: Convert to String
+    String-->>Utils: Return key

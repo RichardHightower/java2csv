@@ -1,0 +1,21 @@
+sequenceDiagram
+    participant OfferDaoImpl
+    participant RedisTemplate
+    participant OfferIndex
+    participant Optional
+    participant StreamSupport
+    participant Collectors
+    participant Collections
+    participant Log
+    
+    OfferDaoImpl->>RedisTemplate: opsForSet()
+    RedisTemplate->>OfferIndex: FACILITY_SHIPMETHOD_ID.with(facilityId, shipMethodId)
+    OfferIndex-->>RedisTemplate: Return offerIds
+    RedisTemplate-->>OfferDaoImpl: Return offerIds
+    OfferDaoImpl->>Optional: ofNullable(offerIds)
+    Optional->>StreamSupport: stream(offerRepository.findAllById(ids).spliterator(), false)
+    StreamSupport->>Collectors: toList()
+    Collectors-->>StreamSupport: Return offerEntities
+    StreamSupport-->>Optional: Return offerEntities
+    Optional-->>OfferDaoImpl: Return offerEntities
+    OfferDaoImpl-->>OfferDaoImpl: Return offerEntities

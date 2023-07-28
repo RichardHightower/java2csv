@@ -1,0 +1,17 @@
+---
+title: jedisConnectionFactory (RedisConfig)
+---
+
+sequenceDiagram
+    participant RedisConfig
+    participant JedisConnectionFactory
+    participant RedisClusterConfiguration
+    participant RedisStandaloneConfiguration
+    
+    RedisConfig->>JedisConnectionFactory: jedisConnectionFactory()
+    JedisConnectionFactory->>RedisConfig: Return JedisConnectionFactory instance
+    JedisConnectionFactory->>RedisClusterConfiguration: redisClusterConfiguration()
+    RedisClusterConfiguration-->>JedisConnectionFactory: Return RedisClusterConfiguration instance
+    JedisConnectionFactory->>RedisStandaloneConfiguration: new RedisStandaloneConfiguration(redisHost, redisPort)
+    RedisStandaloneConfiguration-->>JedisConnectionFactory: Return RedisStandaloneConfiguration instance
+    JedisConnectionFactory-->>RedisConfig: Return JedisConnectionFactory instance

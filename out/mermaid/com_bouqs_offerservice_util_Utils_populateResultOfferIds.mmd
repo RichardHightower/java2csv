@@ -1,0 +1,17 @@
+---
+title: populateResultOfferIds (Utils)
+---
+
+sequenceDiagram
+    participant Utils
+    participant List
+    participant resultOfferIds
+    participant offerIds
+    
+    Utils->>List: Create new list resultOfferIds
+    loop for each index i from minNum to maxNum
+        Utils->>offerIds: Check if i is less than offerIds size
+        offerIds-->>Utils: Return result
+        Utils->>resultOfferIds: Add offerId at index i to resultOfferIds
+    end
+    Utils-->>List: Return resultOfferIds

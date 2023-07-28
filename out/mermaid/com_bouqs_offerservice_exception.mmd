@@ -1,0 +1,17 @@
+---
+title: Package Exception (com.bouqs.offerservice.exception)
+---
+classDiagram
+    class OptimisticLockingException{
+        -static final long serialVersionUID
+    }
+
+    class ResourceNotFoundException{
+    }
+
+    class InvalidInputException{
+    }
+    
+    RuntimeException <|-- ResourceNotFoundException
+    Exception <|-- OptimisticLockingException
+    Exception <|-- InvalidInputException

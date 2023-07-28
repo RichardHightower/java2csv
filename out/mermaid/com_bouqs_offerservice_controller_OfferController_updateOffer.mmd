@@ -1,0 +1,32 @@
+---
+title: Update Offer (OfferController)
+---
+
+sequenceDiagram
+    participant User
+    participant OfferController
+    participant OfferService
+    participant MetricService
+    participant OptimisticLockingException
+    participant ResponseEntity
+    participant CRUDResponse
+    participant HttpStatus
+    
+    User->>OfferController: Update offer
+    OfferController->>OfferService: Update offer
+    OfferService->>MetricService: Increment update offer request metric
+    MetricService-->>OfferService: Return success status
+    OfferService->>OfferService: Update offer
+    OfferService->>MetricService: Increment update offer success metric
+    MetricService-->>OfferService: Return success status
+    OfferService-->>OfferController: Return offer response
+    OfferController->>ResponseEntity: Create response entity
+    ResponseEntity-->>OfferController: Return response entity
+    OfferController-->>User: Return response entity
+    User->>OptimisticLockingException: Handle optimistic locking exception
+    OptimisticLockingException-->>OfferController: Throw optimistic locking exception
+    OfferController->>MetricService: Increment update offer exception metric
+    MetricService-->>OfferController: Return success status
+    OfferController->>MetricService: Increment update offer fail metric
+    MetricService-->>OfferController: Return success status
+    OfferController-->>User: Throw optimistic locking exception

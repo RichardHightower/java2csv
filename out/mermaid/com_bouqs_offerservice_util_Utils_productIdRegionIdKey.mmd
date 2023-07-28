@@ -1,0 +1,16 @@
+---
+title: productIdRegionIdKey (Utils)
+---
+
+sequenceDiagram
+    participant Utils
+    participant StringJoiner
+    participant Constants
+    
+    Utils->>StringJoiner: Create StringJoiner instance
+    Utils->>Constants: Access DELIMITER_REDIS constant
+    StringJoiner->>Utils: Add normalizedDataField(productId)
+    StringJoiner->>Utils: Add regionId
+    Utils->>StringJoiner: Get joined string
+    Utils-->>Utils: Enclose string in curly braces
+    Utils-->>Utils: Return final key

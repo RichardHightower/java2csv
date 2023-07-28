@@ -4,7 +4,7 @@ package com.cloudurable.docgen.mermaid.validation;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
 
-public class AvoidActivateDeactivateRule implements Rule {
+public class AvoidActivateDeactivateRule implements LineRule {
     //private final Pattern PATTERN_COLON = Pattern.compile("\\b(activate|deactivate)\\b(?=.*:)");
     private final Pattern PATTERN = Pattern.compile("^\\s*(activate|deactivate)\\b");
 

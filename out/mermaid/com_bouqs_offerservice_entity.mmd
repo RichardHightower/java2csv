@@ -1,0 +1,74 @@
+---
+title: Package com.bouqs.offerservice.entity
+---
+
+classDiagram
+    class OfferEntity{
+        <<Entity>>
+        -String id
+        -String facilityId
+        -LocalDate shipDate
+        -String skuId
+        -String carrierMethodId
+        -String shipMethodId
+        -String regionId
+        -String productId
+        -LocalDate deliveryDate
+        -String ofbizId
+        -String ecomId
+        -String ofbizFacilityId
+        -String facilityName
+        -String shipMethodName
+        -LocalDateTime timestamp
+        -int priority
+        -String cutoff
+        -String airSectors
+        -String zipCodeExemptions
+        -String timeZone
+        -List<DeliveryWindow> deliveryWindows
+        -int facilityRanking
+        -int facilityCapacity
+        -int facilityCapacityUsage
+        -int productionLeadTime
+        -int carrierMethodCapacity
+        -int carrierMethodCapacityUsage
+        -List<String> essentialMaterialIds
+        -int availableUnits
+        -int version
+        -Long expiration
+    }
+
+    class MaterialEntity{
+        <<Entity>>
+        -String id
+        -String materialId
+        -String inventoryLotId
+        -int baseAPD
+        -String inventoryLotStart
+        -String inventoryLotEnd
+        -int inventoryLotCapacity
+        -int capacityUsage
+        -LocalDateTime timestamp
+        -int version
+        -String materialInventoryLotId
+        -String facilityIdMaterialId
+    }
+
+    class DeliveryWindow{
+        <<Entity>>
+        -String start
+        -String end
+        -String cutoff
+    }
+
+    class MaterialOfferEntity{
+        <<Entity>>
+        -String id
+        -String skuOfferId
+        -String materialOfferId
+        -int materialUnit
+    }
+    
+    OfferEntity "1" o-- "*" DeliveryWindow: has-many
+    MaterialOfferEntity "1" -- "1" OfferEntity: has-a
+    MaterialOfferEntity "1" -- "*" MaterialEntity: has-many

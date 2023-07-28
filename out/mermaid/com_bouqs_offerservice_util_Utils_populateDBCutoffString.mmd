@@ -1,0 +1,28 @@
+sequenceDiagram
+    participant StringUtils
+    participant LocalDate
+    participant log
+    participant LocalTime
+    participant DateTimeParseException
+    participant ZonedDateTime
+    participant ZoneId
+
+    Note over StringUtils, LocalDate, log, LocalTime, DateTimeParseException, ZonedDateTime, ZoneId: populateDBCutoffString(cutoff, date, timezone)
+
+    alt Parameters validation
+        StringUtils->>log: Error - One or more parameter is null
+        log-->>StringUtils: Return cutoff
+    else Cutoff time parsing
+        StringUtils->>log: Warn - Cutoff not in time format
+        log-->>StringUtils: Return cutoff
+    else Cutoff datetime creation
+        LocalDate->>LocalTime: Parse cutoff
+        LocalTime-->>LocalDate: Return cutoffTime
+        LocalDate->>ZoneId: Get ZoneId from timezone
+        ZoneId-->>LocalDate: Return ZoneId
+        LocalDate->>ZonedDateTime: Create ZonedDateTime with date, cutoffTime, and ZoneId
+        ZonedDateTime-->>LocalDate: Return cutoffDateTime
+        ZonedDateTime->>log: Trace - Produced cutoff
+        log-->>ZonedDateTime: Return cutoffResult
+        LocalDate-->>StringUtils: Return cutoffResult
+    end

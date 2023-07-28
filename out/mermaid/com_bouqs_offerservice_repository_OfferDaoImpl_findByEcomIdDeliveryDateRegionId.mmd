@@ -1,0 +1,17 @@
+---
+title: findByEcomIdDeliveryDateRegionId (OfferDaoImpl)
+---
+
+sequenceDiagram
+    participant OfferDaoImpl
+    participant log
+    participant OfferIndex
+    participant LocalDateTime
+    participant queryZSet
+
+    OfferDaoImpl->>log: Start findByEcomIdDeliveryDateRegionId
+    OfferDaoImpl->>log: Debug ecomId, fromDate, toDate, regionId
+    OfferDaoImpl->>OfferIndex: Query OfferIndex with regionId, ecomId
+    OfferDaoImpl->>LocalDateTime: Get current LocalDateTime
+    OfferDaoImpl->>queryZSet: Query ZSet with fromDate, toDate, LocalDateTime, offsetAndCount
+    queryZSet-->>OfferDaoImpl: Return result

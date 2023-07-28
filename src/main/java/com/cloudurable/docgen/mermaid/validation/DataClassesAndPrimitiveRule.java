@@ -3,7 +3,7 @@ package com.cloudurable.docgen.mermaid.validation;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class DataClassesAndPrimitiveRule implements Rule {
+public class DataClassesAndPrimitiveRule implements LineRule {
     private final String DATA_VALUES = "\\b(String|StringBuffer|Map|Queue|byte|float|int|double|long|boolean|char|List|File|Byte|Bytes|bytes)\\b";
 
     private final Pattern BRACKETS =  Pattern.compile("[\\[\\]]");

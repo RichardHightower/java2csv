@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant CartAvailabilityServiceImpl
+    participant ItemRequest
+    participant OfferEntity
+    participant Map
+    participant List
+    participant ItemResponse
+    participant Utils
+    participant MaterialEntity
+
+    CartAvailabilityServiceImpl->>ItemRequest: validateAddonItemRequests(addonItemRequests, offerEntityForPrimary, populatedOfferFullMap, populatedMaterialMap, populatedMaterialUsageMap)
+    loop for each addonItemRequest
+        ItemRequest->>Map: populatedOfferFullMap.getOrDefault(key, new ArrayList<>())
+        Map-->>ItemRequest: offerEntitiesForAddon
+        alt offerEntitiesForAddon is empty
+            ItemRequest->>CartAvailabilityServiceImpl: addonItemResponses.add(populateItemResponse(addonItemRequest, false))
+        else offerEntitiesForAddon is not empty
+            loop for each offerEntityForAddon in offerEntitiesForAddon
+                ItemRequest->>CartAvailabilityServiceImpl: validateAddonOffer(addonItemRequest, offerEntityForAddon, populatedMaterialMap, populatedMaterialUsageMap)
+                alt isValidOfferAndMaterial is true
+                    ItemRequest->>CartAvailabilityServiceImpl: addonItemResponses.add(populateItemResponse(addonItemRequest, isValidOfferAndMaterial))
+                else isValidOfferAndMaterial is false
+                    ItemRequest->>CartAvailabilityServiceImpl: log.trace("Cannot find any valid MaterialEntity for addonItem: " + addonItemRequest.getSku())
+            end
+        end
+    end
+    CartAvailabilityServiceImpl-->>ItemRequest: return addonItemResponses

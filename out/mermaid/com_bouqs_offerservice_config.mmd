@@ -1,0 +1,47 @@
+---
+title: Package com.bouqs.offerservice.config
+---
+
+classDiagram
+    class WebClientConfig{
+        -String serviceRegionURL
+    }
+
+    class SecurityConfig{
+        extends WebSecurityConfigurerAdapter
+    }
+
+    class MetricsConfig{
+        -Logger log
+        -String environment
+        -ApplicationContext applicationContext
+        -MeterRegistry meterRegistry
+    }
+
+    class RedisConfig{
+        -Logger log
+        -String redisDriverType
+        -String redisHost
+        -int redisPort
+        -int maxIdle
+        -int maxTotal
+        -int maxWait
+        -int minIdle
+        -boolean redisClusterCacheEnabled
+    }
+
+    class SwaggerConfig{
+
+    }
+
+    class TimedConfiguration{
+
+    }
+
+    WebClientConfig --|> Configuration
+    SecurityConfig --|> WebSecurityConfigurerAdapter: extends
+    MetricsConfig --|> Configuration
+    RedisConfig --|> Configuration
+    RedisConfig --|> EnableRedisRepositories
+    SwaggerConfig --|> Configuration
+    TimedConfiguration --|> Configuration

@@ -1,0 +1,25 @@
+---
+title: deleteMaterialOffer (MaterialController)
+---
+
+sequenceDiagram
+    participant User
+    participant MaterialController
+    participant MetricService
+    participant MaterialService
+    participant ResourceNotFoundException
+    participant ResponseEntity
+    participant CRUDResponse
+    participant HttpStatus
+
+    User->>MaterialController: DELETE /offer/{id}
+    MaterialController->>MetricService: increment(Metric.DELETE_MATERIAL_OFFER_REQUEST.label)
+    MaterialController->>MaterialService: deleteMaterialOfferById(id)
+    MaterialService->>ResourceNotFoundException: throw ex
+    ResourceNotFoundException-->>MaterialController: throw ex
+    MaterialController->>MetricService: increment(Metric.DELETE_MATERIAL_OFFER_EXCEPTION.label)
+    MaterialController->>MetricService: increment(Metric.DELETE_MATERIAL_OFFER_FAIL.label)
+    MaterialController-->>User: HTTP 404 Not Found
+    MaterialController->>MetricService: increment(Metric.DELETE_MATERIAL_OFFER_SUCCESS.label)
+    MaterialController->>ResponseEntity: new ResponseEntity<>(materialCRUDResponse, HttpStatus.OK)
+    ResponseEntity-->>User: HTTP 200 OK

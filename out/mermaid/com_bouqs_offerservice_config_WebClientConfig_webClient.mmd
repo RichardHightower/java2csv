@@ -1,0 +1,24 @@
+sequenceDiagram
+    participant WebClientConfig
+    participant HttpClient
+    participant ChannelOption
+    participant ReadTimeoutHandler
+    participant WriteTimeoutHandler
+    participant ReactorClientHttpConnector
+    participant WebClient
+    participant HttpHeaders
+    participant MediaType
+    
+    WebClientConfig->>HttpClient: Create HttpClient
+    HttpClient->>ChannelOption: Set CONNECT_TIMEOUT_MILLIS option
+    ChannelOption-->>HttpClient: Return configured HttpClient
+    HttpClient->>ReadTimeoutHandler: Add ReadTimeoutHandler to connection
+    HttpClient->>WriteTimeoutHandler: Add WriteTimeoutHandler to connection
+    HttpClient-->>WebClientConfig: Return configured HttpClient
+    WebClientConfig->>ReactorClientHttpConnector: Create ReactorClientHttpConnector
+    ReactorClientHttpConnector->>HttpClient: Use configured HttpClient
+    ReactorClientHttpConnector-->>WebClientConfig: Return configured ReactorClientHttpConnector
+    WebClientConfig->>WebClient: Create WebClient
+    WebClient->>WebClientConfig: Set baseUrl and clientConnector
+    WebClientConfig->>WebClient: Set default headers
+    WebClientConfig-->>WebClient: Return configured WebClient

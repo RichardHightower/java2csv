@@ -3,7 +3,7 @@ package com.cloudurable.docgen.mermaid.validation;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ParticipantAliasRule implements Rule {
+public class ParticipantAliasRule implements LineRule {
     private final String ALIAS_PATTERN = "^participant\\s+.+\\s+as\\s+.+$";
     private final Pattern PATTERN = Pattern.compile(ALIAS_PATTERN);
 

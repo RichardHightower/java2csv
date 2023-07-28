@@ -1,0 +1,33 @@
+---
+title: validateDate (Utils)
+---
+
+sequenceDiagram
+    participant StringUtils
+    participant LocalDate
+    participant log
+    participant Exception
+
+    Note over StringUtils, LocalDate: Participants used for data processing
+
+    alt Check if dateStr is empty
+        StringUtils->>StringUtils: isEmpty(dateStr)
+        StringUtils-->>Utils: Return result
+    else Parse dateStr to LocalDate
+        Utils->>LocalDate: parse(dateStr)
+        alt Parsing successful
+            LocalDate-->>Utils: Return comparingDate
+        else Parsing failed
+            LocalDate->>log: debug(e.getMessage())
+            log-->>Utils: Return false
+        end
+    end
+
+    alt Compare comparingDate with fromDate and endDate
+        Utils->>comparingDate: isAfter(fromDate) || isEqual(fromDate)
+        comparingDate->>Utils: Return result
+        Utils->>comparingDate: equals(endDate) || isBefore(endDate)
+        comparingDate-->>Utils: Return result
+    end
+
+    Utils-->>Utils: Return final result

@@ -1,0 +1,161 @@
+classDiagram
+    class SyncUpdaterResponse{
+        -List<CRUDResponse> createMaterialResponses
+        -List<CRUDResponse> createMaterialOfferResponses
+        -List<CRUDResponse> createOfferResponses
+        -List<CRUDResponse> updateMaterialResponses
+        -List<CRUDResponse> updateMaterialOfferResponses
+        -List<CRUDResponse> updateOfferResponses
+        -List<CRUDResponse> deleteMaterialResponses
+        -List<CRUDResponse> deleteMaterialOfferResponses
+        -List<CRUDResponse> deleteOfferResponses
+    }
+
+    class ProductsAvailabilityResponse{
+        ~JsonInclude.Include.NonNull LocalDate deliverDate
+        ~JsonInclude.Include.NonNull String regionId
+        ~JsonInclude.Include.NonNull String zipCode
+        +Set<String> products
+        +String nextPage
+    }
+
+    class AvailableOffersResponse{
+        ~LocalDate deliveryDate
+        +String regionId
+        +String zipCode
+        +String skuId
+        +String ofbizId
+        +List<OfferResponse> offers
+    }
+
+    class FacilityDeliveryWindowsForShipMethodResponse{
+        +String facilityId
+        +String shipMethodId
+        +List<DeliveryWindowResponse> deliveryWindows
+    }
+
+    class CartItemResponse{
+        +String orderItemNumber
+        +ItemResponse primaryProduct
+        +List<ItemResponse> addOnProducts
+        +Map<String, List<String>> addOnAvailability
+        +LocalDate deliveryDate
+        +DeliveryWindowResponse deliveryWindows
+        +DestinationResponse destination
+        +String reservationToken
+        +String errorMessage
+        +boolean itemValid
+    }
+
+    class MonthResponse{
+        +int year
+        +int month
+        +List<DayResponse> days
+    }
+
+    class CartAvailabilityResponse{
+        +CartResponse isCartValid
+    }
+
+    class MaterialOfferResponse{
+    }
+
+    class DeliveryWindowResponse{
+        +String startTime
+        +String endTime
+        +String cutoff
+    }
+
+    class OfferResponse{
+        +String id
+        +String facilityId
+        +LocalDate shipDate
+        +String skuId
+        +String carrierMethodId
+        +String shipMethodId
+        +String regionId
+        +String productId
+        +LocalDate deliveryDate
+        +String ofbizId
+        +String ecomId
+        +String ofbizFacilityId
+        +String facilityName
+        +String shipMethodName
+        +LocalDateTime timestamp
+        +int priority
+        +String cutoff
+        +int availableUnits
+        +String airSectors
+        +String zipCodeExemptions
+        +String timeZone
+        +List<DeliveryWindow> deliveryWindows
+        +int facilityRanking
+        +int facilityCapacity
+        +int facilityCapacityUsage
+        +int productionLeadTime
+        +int carrierMethodCapacity
+        +int carrierMethodCapacityUsage
+        +int version
+        +Long expiration
+        +Map<String, List<MaterialOfOfferResponse>> materials
+    }
+
+    class ItemResponse{
+        +boolean valid
+    }
+
+    class MaterialOfOfferResponse{
+        +String id
+        +String materialId
+        +String inventoryLotId
+        +int baseAPD
+        +String inventoryLotStart
+        +String inventoryLotEnd
+        +int inventoryLotCapacity
+        +int capacityUsage
+        +int materialUnit
+        +LocalDateTime timestamp
+    }
+
+    class CartResponse{
+        +List<CartItemResponse> items
+        +boolean allValid
+    }
+
+    class DayResponse{
+        +int day
+        +String timeZone
+        +String cutoff
+        +LocalDate deliveryDate
+        +List<DeliveryWindowResponse> deliveryWindows
+    }
+
+    class RegionResponseList{
+        +String nextPage
+        +List<RegionResponse> regionResponses
+    }
+
+    class RegionResponse{
+        +@NotNull String shipMethodId
+        +@NotNull String region
+        +@NotNull int days
+    }
+
+    class MaterialResponse{
+    }
+
+    class DestinationResponse{
+    }
+
+    class DailyProductAvailabilityResponse{
+        +String productId
+        +LocalDate fromDate
+        +LocalDate toDate
+        +String regionId
+        +List<MonthResponse> months
+    }
+
+    SyncUpdaterResponse ..> CRUDResponse: has-many
+    ProductsAvailabilityResponse ..> OfferResponse: has-many
+    AvailableOffersResponse -- OfferResponse: has-many
+   

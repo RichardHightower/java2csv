@@ -1,0 +1,21 @@
+sequenceDiagram
+    participant User
+    participant OfferController
+    participant UsageUpdateRequest
+    participant OfferService
+    participant SyncUpdaterResponse
+    participant MetricService
+    participant MDC
+    participant ResponseEntity
+    participant HttpStatus
+
+    User->>OfferController: Send sync updater usage request
+    OfferController->>UsageUpdateRequest: Handle update request
+    UsageUpdateRequest->>OfferService: Update offer usage
+    OfferService-->>UsageUpdateRequest: Return sync updater response
+    UsageUpdateRequest-->>OfferController: Return sync updater response
+    OfferController->>MetricService: Increment sync updater usage request metric
+    MetricService-->>OfferController: Return success status
+    OfferController->>ResponseEntity: Create response entity
+    ResponseEntity-->>OfferController: Return response entity
+    OfferController-->>User: Return response entity

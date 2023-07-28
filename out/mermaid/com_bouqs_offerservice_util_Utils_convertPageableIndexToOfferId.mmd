@@ -1,0 +1,20 @@
+---
+title: convertPageableIndexToOfferId (Utils)
+---
+
+sequenceDiagram
+    participant Utils
+    participant String
+    participant String[]
+    participant StringJoiner
+
+    Utils->>String: split(pageableIdKey)
+    String-->>Utils: items[]
+    Utils->>StringJoiner: create StringJoiner
+    StringJoiner->>StringJoiner: add items[0]
+    StringJoiner->>StringJoiner: add items[1]
+    StringJoiner->>StringJoiner: add items[2]
+    StringJoiner->>StringJoiner: add items[3]
+    StringJoiner->>StringJoiner: add items[4]
+    StringJoiner->>StringJoiner: add items[5]
+    StringJoiner-->>Utils: return joiner.toString()

@@ -1,0 +1,19 @@
+---
+title: createObjectMapper (JsonFactory)
+---
+
+sequenceDiagram
+    participant ObjectMapper
+    participant DeserializationFeature
+    participant VisibilityChecker
+    participant JsonAutoDetect
+    
+    Note over ObjectMapper: Create ObjectMapper instance
+    ObjectMapper->>DeserializationFeature: Disable FAIL_ON_UNKNOWN_PROPERTIES
+    ObjectMapper->>VisibilityChecker: Set field visibility to ANY
+    VisibilityChecker->>JsonAutoDetect: Set default field visibility
+    JsonAutoDetect-->>VisibilityChecker: Return updated field visibility
+    VisibilityChecker-->>ObjectMapper: Return updated field visibility
+    DeserializationFeature-->>ObjectMapper: Return disabled feature
+    Note over ObjectMapper: Register modules
+    ObjectMapper-->>ObjectMapper: Return configured ObjectMapper

@@ -1,0 +1,20 @@
+---
+title: Save OfferEntity
+---
+
+sequenceDiagram
+    participant OfferEntity
+    participant log
+    participant ZonedDateTime
+    participant Utils
+    participant offerRepository
+
+    OfferEntity->>log: Log start of save
+    OfferEntity->>log: Log insertingOfferEntity
+    OfferEntity->>ZonedDateTime: Parse cutoff date
+    ZonedDateTime-->>OfferEntity: Return parsed date
+    OfferEntity->>Utils: Populate data to DB
+    Utils-->>OfferEntity: Return populated data
+    OfferEntity->>offerRepository: Save insertingOfferEntity
+    offerRepository-->>OfferEntity: Return saved OfferEntity
+    OfferEntity-->>: Return saved OfferEntity

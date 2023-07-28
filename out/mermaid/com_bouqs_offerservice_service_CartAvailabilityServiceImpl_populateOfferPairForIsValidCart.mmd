@@ -1,0 +1,19 @@
+sequenceDiagram
+    participant CartAvailabilityServiceImpl
+    participant Utils
+    participant OfferEntity
+    participant Map
+    participant List
+    participant Collectors
+    participant Pair
+    participant log
+    
+    CartAvailabilityServiceImpl->>Utils: buildSkuIdOrOfbizIdDeliveryDateRegionId()
+    CartAvailabilityServiceImpl->>Utils: buildSkuIdOrOfbizIdDeliveryDateRegionIdShipDateFacilityIdShipMethodId()
+    CartAvailabilityServiceImpl->>log: trace("Start populateOfferPairForIsValidCart")
+    CartAvailabilityServiceImpl->>offerEntities: stream()
+    offerEntities->>Collectors: groupingBy()
+    offerEntities->>Collectors: groupingBy()
+    Collectors-->>Map: Return ofbizIdDeliveryDateRegionIdMap
+    Collectors-->>Map: Return ofbizIdDeliveryDateRegionIdShipDateMap
+    Pair-->>CartAvailabilityServiceImpl: Return populated offer pair

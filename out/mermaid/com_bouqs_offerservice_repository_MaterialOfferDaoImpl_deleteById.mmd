@@ -1,0 +1,12 @@
+---
+title: deleteById (MaterialOfferDaoImpl)
+---
+
+sequenceDiagram
+    participant MaterialOfferDaoImpl
+    participant log
+    participant materialOfferRepository
+    
+    MaterialOfferDaoImpl->>log: Start deleteById
+    MaterialOfferDaoImpl->>log: materialOfferId: {materialOfferId}
+    MaterialOfferDaoImpl->>materialOfferRepository: deleteById(materialOfferId)

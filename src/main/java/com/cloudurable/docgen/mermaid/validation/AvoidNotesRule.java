@@ -3,7 +3,7 @@ package com.cloudurable.docgen.mermaid.validation;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class AvoidNotesRule implements Rule {
+public class AvoidNotesRule implements LineRule {
 
     private final Pattern PATTERN = Pattern.compile("^\\s*Note\\b");
 

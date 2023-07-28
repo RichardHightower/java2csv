@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant OfferController
+    participant OfferUpdateRequest
+    participant offerService
+    participant SyncUpdaterResponse
+    participant metricService
+    participant MDC
+    participant Exception
+    
+    OfferController->>OfferUpdateRequest: Handle update
+    OfferUpdateRequest->>offerService: Update offer
+    offerService-->>OfferUpdateRequest: Return response
+    OfferUpdateRequest-->>OfferController: Return response
+    OfferController->>metricService: Increment metric
+    metricService->>ResponseEntity: Create response entity
+    ResponseEntity-->>OfferController: Return response entity
+    OfferController->>HttpStatus: Return HTTP status
+    HttpStatus-->>OfferController: Return HTTP status
+    OfferController->>Exception: Handle exception
+    Exception-->>OfferController: Throw exception
+    OfferController->>metricService: Increment metric
+    metricService->>metricService: Increment metric
+    metricService->>Exception: Increment metric
+    Exception-->>Exception: Throw exception
+    Exception-->>OfferController: Throw exception
+    OfferController->>MDC: Clear MDC
+    MDC-->>OfferController: Clear MDC

@@ -1,0 +1,19 @@
+sequenceDiagram
+    participant OfferDaoImpl
+    participant log
+    participant OfferIndex
+    participant LocalDateTime
+    participant LocalDate
+    participant Map
+    participant Set
+    participant queryZSet
+    
+    OfferDaoImpl->>log: Start findByOfbizIdDeliveryDate
+    OfferDaoImpl->>log: Debug ofbizId, fromDate, toDate
+    OfferDaoImpl->>OfferIndex: Query OfferIndex with ofbizId
+    OfferDaoImpl->>LocalDate: Convert fromDate to EpochDay
+    OfferDaoImpl->>LocalDate: Convert toDate to EpochDay
+    OfferDaoImpl->>LocalDateTime: Get current LocalDateTime
+    OfferDaoImpl->>queryZSet: Query ZSet with parameters
+    queryZSet-->>OfferDaoImpl: Return Map<LocalDate, Set<String>>
+    OfferDaoImpl-->>OfferDaoImpl: Return Map<LocalDate, Set<String>>

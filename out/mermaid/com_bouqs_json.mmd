@@ -1,0 +1,18 @@
+---
+title: Package com.bouqs.json
+---
+classDiagram
+    class JsonException{
+        
+    }
+
+    class Json{
+        -ObjectMapper objectMapper
+    }
+
+    class JsonFactory{
+        
+    }
+
+    JsonException --|> RuntimeException: extends
+    JsonFactory "1" o-- "1" Json: has-a

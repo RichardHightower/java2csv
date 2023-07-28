@@ -1,0 +1,26 @@
+sequenceDiagram
+    participant OfferAvailabilityController
+    participant TimeRecorder
+    participant MDC
+    participant metricService
+    participant log
+    participant CartRequest
+    participant CartResponse
+    participant CartAvailabilityService
+    participant CartAvailabilityResponse
+    participant HttpStatus
+    participant Exception
+    
+    OfferAvailabilityController->>TimeRecorder: Create TimeRecorder
+    OfferAvailabilityController->>MDC: Put request ID in MDC
+    OfferAvailabilityController->>metricService: Increment VALIDATE_CART_REQUEST metric
+    OfferAvailabilityController->>log: Log validateCart request
+    OfferAvailabilityController->>CartAvailabilityService: Call validateCart with CartRequest
+    CartAvailabilityService->>CartResponse: Validate cart and return CartResponse
+    OfferAvailabilityController->>metricService: Increment VALIDATE_CART_SUCCESS metric
+    OfferAvailabilityController->>CartAvailabilityResponse: Create CartAvailabilityResponse with CartResponse
+    OfferAvailabilityController->>HttpStatus: Create ResponseEntity with CartAvailabilityResponse and HttpStatus.OK
+    OfferAvailabilityController->>OfferAvailabilityController: Return ResponseEntity
+    OfferAvailabilityController->>MDC: Clear MDC
+    OfferAvailabilityController->>log: Log total time taken for validateCart response
+    OfferAvailabilityController->>Exception: Handle error and throw exception

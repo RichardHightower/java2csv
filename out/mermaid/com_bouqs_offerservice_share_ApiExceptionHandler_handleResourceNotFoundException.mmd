@@ -1,0 +1,25 @@
+---
+title: Handle ResourceNotFoundException (ApiExceptionHandler)
+---
+
+sequenceDiagram
+    participant ResourceNotFoundException
+    participant List
+    participant ArrayList
+    participant log
+    participant ApiError
+    participant LocalDateTime
+    participant HttpStatus
+    participant ResponseEntityBuilder
+    participant ResponseEntity
+    
+    ResourceNotFoundException->>List: Create list of details
+    List->>ArrayList: Add exception message to details list
+    ResourceNotFoundException->>log: Log exception message
+    log-->>ResourceNotFoundException: Return logged error
+    ResourceNotFoundException->>ApiError: Create ApiError object
+    LocalDateTime-->>ApiError: Get current date and time
+    HttpStatus-->>ApiError: Set HTTP status as NOT_FOUND
+    ArrayList-->>ApiError: Set details list in ApiError
+    ApiError-->>ResponseEntityBuilder: Build ResponseEntity
+    ResponseEntityBuilder-->>ResponseEntity: Return ResponseEntity

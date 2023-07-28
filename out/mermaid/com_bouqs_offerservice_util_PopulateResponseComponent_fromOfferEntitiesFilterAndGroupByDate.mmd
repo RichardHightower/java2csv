@@ -1,0 +1,34 @@
+---
+title: fromOfferEntitiesFilterAndGroupByDate (PopulateResponseComponent)
+---
+
+sequenceDiagram
+    participant log
+    participant offerEntities
+    participant monthResponses
+    participant dayResponsesMap
+    participant entities
+    participant deliveryWindowResponses
+    participant dayResponse
+    participant previousDayResponses
+    participant responseGroupedByMonth
+    participant gc
+    participant dr
+    participant monthResponse
+
+    Note over log: Start fromOfferEntitiesFilterAndGroupByDate
+    log->>log: Trace: Start fromOfferEntitiesFilterAndGroupByDate
+    log->>log: Debug: fromDate: {fromDate}; toDate: {toDate}
+    offerEntities-->>dayResponsesMap: Check if offerEntities is not null
+    dayResponsesMap-->>entities: Iterate over offerEntities
+    entities-->>deliveryWindowResponses: Map offerEntity to deliveryWindowResponses
+    deliveryWindowResponses-->>deliveryWindowResponses: Filter out null values
+    deliveryWindowResponses-->>deliveryWindowResponses: Sort by cutoff time
+    deliveryWindowResponses-->>dayResponse: Create dayResponse
+    dayResponse-->>previousDayResponses: Add dayResponse to previousDayResponses
+    previousDayResponses-->>dayResponsesMap: Update dayResponsesMap
+    dayResponsesMap-->>responseGroupedByMonth: Group day responses by year and month
+    responseGroupedByMonth-->>monthResponses: Create month response and add to monthResponses
+
+    Note over log: Return monthResponses
+    monthResponses-->>offerEntities: Return monthResponses

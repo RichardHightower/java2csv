@@ -1,0 +1,12 @@
+---
+title: Redis Template (RedisConfig)
+---
+
+sequenceDiagram
+    participant RedisConfig
+    participant RedisTemplate
+    participant RedisConnectionFactory
+    
+    RedisConfig->>RedisTemplate: Create RedisTemplate bean
+    RedisTemplate->>RedisConnectionFactory: Set connection factory
+    RedisTemplate-->>RedisConfig: Return RedisTemplate bean

@@ -1,0 +1,16 @@
+sequenceDiagram
+    participant OfferDaoImpl
+    participant log
+    participant OfferIndex
+    participant LocalDate
+    participant String
+    participant Map
+    participant Set
+    participant long
+    participant LocalDateTime
+    
+    OfferDaoImpl->>log: log.trace("Start findByOfbizIdAndDeliveryDateAndRegionId")
+    OfferDaoImpl->>log: log.debug("ofbizId: {}; fromDate: {}; toDate: {}; regionId: {}", ofbizId, fromDate, toDate, regionId)
+    OfferDaoImpl->>OfferIndex: queryZSet(OfferIndex.REGION_OFBIZ_ID.with(regionId, ofbizId), fromDate.toEpochDay(), toDate.toEpochDay(), LocalDateTime.now(), offsetAndCount)
+    OfferIndex-->>OfferDaoImpl: Return result
+    OfferDaoImpl-->>Map: Return result

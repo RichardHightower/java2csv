@@ -48,8 +48,10 @@ public class Main {
                     DocGenerator.builder().inputDirectoryPath(directoryPath).outputFile(outputFile)
                             .useExistingMermaidIfFound(true)
                             .inlineMermaid(true).build()
+
+                            .genJustPackage();
+
                             //.genDesignDoc();
-                            .runMethodGen();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

@@ -1,0 +1,15 @@
+---
+title: Package com.bouqs.offerservice
+---
+
+classDiagram
+    class TestRedisDataStore {
+        -Logger log
+    }
+
+    class OfferApplication {
+    }
+
+    TestRedisDataStore --|> CommandLineRunner: implements
+    OfferApplication --|> SpringBootApplication: extends
+    OfferApplication --|> EnableScheduling: extends

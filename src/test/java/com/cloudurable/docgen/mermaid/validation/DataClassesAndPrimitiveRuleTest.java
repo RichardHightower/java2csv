@@ -7,7 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class DataClassesAndPrimitiveRuleTest {
-    private Rule rule;
+    private LineRule rule;
     private int lineNumber;
 
     @BeforeEach

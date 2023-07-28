@@ -1,0 +1,13 @@
+---
+title: findBySkuEntityId (MaterialOfferDaoImpl)
+---
+
+sequenceDiagram
+    participant MaterialOfferDaoImpl
+    participant log
+    participant materialOfferRepository
+    
+    MaterialOfferDaoImpl->>log: Start findBySkuOfferId
+    MaterialOfferDaoImpl->>log: skuOfferId: {skuOfferId}
+    MaterialOfferDaoImpl->>materialOfferRepository: findBySkuOfferId(skuOfferId)
+    materialOfferRepository-->>MaterialOfferDaoImpl: Return material offers

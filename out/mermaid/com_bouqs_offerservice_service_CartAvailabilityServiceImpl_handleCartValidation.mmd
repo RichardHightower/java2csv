@@ -1,0 +1,52 @@
+---
+title: handleCartValidation (CartAvailabilityServiceImpl)
+---
+
+sequenceDiagram
+    participant CartAvailabilityServiceImpl
+    participant Logger
+    participant retrieveAndPopulateRegion
+    participant validateCartItemRequests
+    participant populateParamsFromItemRequests
+    participant getOffersForIsCartValid
+    participant getMaterialOffersForIsCartValid
+    participant getMaterialsForIsCartValid
+    participant populateOfferPairForIsValidCart
+    participant populateMaterialOfferPairForIsValidCart
+
+    CartAvailabilityServiceImpl->>Logger: Log start of handleCartValidation
+    CartAvailabilityServiceImpl->>retrieveAndPopulateRegion: Retrieve and populate region by zipcode
+    retrieveAndPopulateRegion-->>CartAvailabilityServiceImpl: Return regionByZipcodeMap
+    CartAvailabilityServiceImpl->>Logger: Log regionByZipcodeMap
+    alt regionByZipcodeMap is empty
+        CartAvailabilityServiceImpl->>validateCartItemRequests: Validate cart item requests with empty regionByZipcodeMap
+        validateCartItemRequests-->>CartAvailabilityServiceImpl: Return validated cart item requests
+    else
+        CartAvailabilityServiceImpl->>populateParamsFromItemRequests: Populate params from item requests
+        populateParamsFromItemRequests-->>CartAvailabilityServiceImpl: Return ofbizIdDeliveryDateRegionIdSet
+        CartAvailabilityServiceImpl->>getOffersForIsCartValid: Get offers for isCartValid
+        getOffersForIsCartValid-->>CartAvailabilityServiceImpl: Return offerEntities
+        alt offerEntities is empty
+            CartAvailabilityServiceImpl->>validateCartItemRequests: Validate cart item requests with empty offerEntities
+            validateCartItemRequests-->>CartAvailabilityServiceImpl: Return validated cart item requests
+        else
+            CartAvailabilityServiceImpl->>getMaterialOffersForIsCartValid: Get material offers for isCartValid
+            getMaterialOffersForIsCartValid-->>CartAvailabilityServiceImpl: Return materialOfferEntities
+            alt materialOfferEntities is empty
+                CartAvailabilityServiceImpl->>validateCartItemRequests: Validate cart item requests with empty materialOfferEntities
+                validateCartItemRequests-->>CartAvailabilityServiceImpl: Return validated cart item requests
+            else
+                CartAvailabilityServiceImpl->>getMaterialsForIsCartValid: Get materials for isCartValid
+                getMaterialsForIsCartValid-->>CartAvailabilityServiceImpl: Return materialEntities
+                alt materialEntities is empty
+                    CartAvailabilityServiceImpl->>validateCartItemRequests: Validate cart item requests with empty materialEntities
+                    validateCartItemRequests-->>CartAvailabilityServiceImpl: Return validated cart item requests
+                else
+                    CartAvailabilityServiceImpl->>populateOfferPairForIsValidCart: Populate offer pair for isValidCart
+                    populateOfferPairForIsValidCart-->>CartAvailabilityServiceImpl: Return populatedOfferPair
+                    CartAvailabilityServiceImpl->>populateMaterialOfferPairForIsValidCart: Populate material offer pair for isValidCart
+                    populateMaterialOfferPairForIsValidCart-->>CartAvailabilityServiceImpl: Return populatedMaterialOfferPair
+                    CartAvailabilityServiceImpl->>Logger: Log end of handleCartValidation
+                    CartAvailabilityServiceImpl->>validateCartItemRequests: Validate cart item requests with all data
+                    validateCartItemRequests-->>CartAvailabilityServiceImpl: Return validated cart item requests
+    CartAvailabilityServiceImpl-->>CartAvailabilityServiceImpl: Return validated cart item requests

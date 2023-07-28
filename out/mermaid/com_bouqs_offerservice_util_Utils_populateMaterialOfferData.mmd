@@ -1,0 +1,12 @@
+---
+title: populateMaterialOfferData (Utils)
+---
+
+sequenceDiagram
+    participant existedEntity
+    participant insertingEntity
+
+    existedEntity->>insertingEntity: getMaterialUnit()
+    insertingEntity-->>existedEntity: Return material unit
+    existedEntity-->>existedEntity: setMaterialUnit(materialUnit)
+    existedEntity-->>existedEntity: Return updated existedEntity

@@ -1,0 +1,25 @@
+sequenceDiagram
+    participant OfferServiceImpl
+    participant Map
+    participant UpdateRequest
+    participant Set
+    
+    OfferServiceImpl->>Map: Retrieve new offer entities map
+    Map-->>OfferServiceImpl: Return new offer entities map
+    OfferServiceImpl->>Map: Retrieve old offer entities map
+    Map-->>OfferServiceImpl: Return old offer entities map
+    OfferServiceImpl->>UpdateRequest: Retrieve update request
+    UpdateRequest-->>OfferServiceImpl: Return update request
+    OfferServiceImpl->>Set: Create empty set for updated offer entities
+    loop through old offer entities
+        OfferServiceImpl->>Map: Check if new offer entities map contains old entity
+        Map-->>OfferServiceImpl: Return true if contains, false otherwise
+        OfferServiceImpl->>Map: Retrieve new offer entity for old entity
+        Map-->>OfferServiceImpl: Return new offer entity
+        OfferServiceImpl->>OfferEntity: Check if old entity timestamp is after new entity timestamp
+        OfferEntity-->>OfferServiceImpl: Return true if after, false otherwise
+        OfferServiceImpl->>UpdateRequest: Call offer entity update strategy with old entity and new entity
+        UpdateRequest-->>OfferServiceImpl: Return updated offer entity
+        OfferServiceImpl->>Set: Add updated offer entity to set
+    end
+    OfferServiceImpl-->>Set: Return set of updated offer entities

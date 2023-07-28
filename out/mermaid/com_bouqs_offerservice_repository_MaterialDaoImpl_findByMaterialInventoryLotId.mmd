@@ -1,0 +1,9 @@
+sequenceDiagram
+    participant MaterialDaoImpl
+    participant MaterialRepository
+    participant Logger
+    
+    MaterialDaoImpl->>Logger: Start findByMaterialInventoryLotId
+    MaterialDaoImpl->>Logger: materialInventoryLotId: {materialId}-{inventoryLotId}
+    MaterialDaoImpl->>MaterialRepository: findByMaterialInventoryLotId(materialInventoryLotId)
+    MaterialRepository-->>MaterialDaoImpl: Return list of MaterialEntity
