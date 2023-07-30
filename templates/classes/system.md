@@ -36,6 +36,7 @@ interface implementation, and aggregation, if any. Please use the following from
   - **Dashed link**: `Class1 .. Class2: fieldName`.
 - Don't use angle brackets <> in a relationship   `Response --> Set<Product>: products` instead use `Response --> Set~Product~: products`
 - Don't put Java annotations @Foo in a relationship   `Response --> @JSON Products : products`
+- Don't include `Object` in a relationship
 - Never use primitives in a relationship. Don't use int, long, short, String, etc.
 - **Add field names in relationships**: Use `:`.
 - **Specify cardinality**: Use near the end of an association, options: "1", "0..1", "1..", "", "n", "0..n", "1..n".
@@ -47,7 +48,7 @@ interface implementation, and aggregation, if any. Please use the following from
 - Java Mapping **associations** and compositions based on the fields in each class. 
   - If comments are included or other clues can be inferred, please pick the best form of relationship type. 
   - Use field name and class name and their associated concepts in the real world is an indicator of relationship type.
-
+- Java annotations become Mermaid annotations
 ## Examples 
 Each diagram should be preceded by a YAML header specifying the title as follows:
 
@@ -72,6 +73,24 @@ classDiagram
 
 ```
 
+## Java annotations become Mermaid annotations
+```java
+@Component
+public class Scheduler
+        private AtomicInteger testGauge
+        private Counter testCounter
+
+```
+
+```mermaid
+classDiagram
+    class Scheduler{
+        <<Component>>
+        -AtomicInteger testGauge
+        -Counter testCounter
+    }
+
+```
 Notice that the annotation goes inside the class definition.
 
 ### Automobile Example showing relationship types in Mermaid

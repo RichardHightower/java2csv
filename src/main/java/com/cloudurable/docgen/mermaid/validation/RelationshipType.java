@@ -2,14 +2,17 @@ package com.cloudurable.docgen.mermaid.validation;
 
 
 public enum RelationshipType {
-    EXTENDS("<|--"),
-    IMPLEMENTS("<|.."),
+    INHERITS_LEFT("<|--"),
+    IMPLEMENTS_LEFT("<|.."),
+    ASSOCIATION_LEFT("<--"),
+    DEPENDENCY_LEFT("<.."),
     COMPOSITION("*--"),
     AGGREGATION("o--"),
-    ASSOCIATION("-->"),
     SOLID_LINK("--"),
-    DEPENDENCY("..>"),
-    REALIZATION("..|>"),
+    DEPENDENCY_RIGHT("..>"),
+    ASSOCIATION_RIGHT("-->"),
+    INHERITS_RIGHT("--|>"),
+    IMPLEMENTS_RIGHT("..|>"),
     DASHED_LINK(".."),
     NOT_FOUND("NOT FOUND");
 

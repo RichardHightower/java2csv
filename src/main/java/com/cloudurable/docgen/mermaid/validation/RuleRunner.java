@@ -42,8 +42,9 @@ public class RuleRunner {
 
     public List<RuleResult> checkContent(String content) {
         List<String> lines = List.of(content.split("\n"));
-        List<RuleResult> ruleResults = runContentRule(content);
+        List<RuleResult> ruleResults = new ArrayList<>();
         ruleResults.addAll(checkLines(lines));
+        ruleResults.addAll(runContentRule(content));
         return ruleResults;
     }
 

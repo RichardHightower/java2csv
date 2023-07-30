@@ -3,6 +3,9 @@ package com.cloudurable.docgen.generators;
 import com.cloudurable.docgen.MermaidUtils;
 import com.cloudurable.docgen.extract.FileUtils;
 import com.cloudurable.docgen.mermaid.validation.*;
+import com.cloudurable.docgen.mermaid.validation.classes.NoArrayRule;
+import com.cloudurable.docgen.mermaid.validation.classes.NoCollectionRule;
+import com.cloudurable.docgen.mermaid.validation.classes.NoPrimitiveOrBasicTypesRule;
 import com.cloudurable.jai.OpenAIClient;
 import com.cloudurable.jai.model.text.completion.chat.ChatRequest;
 import com.cloudurable.jai.model.text.completion.chat.Message;
@@ -41,11 +44,13 @@ public class PackageMermaidClassDiagramGen {
 
     private static RuleRunner buildRuleRunner() {
         RuleRunner ruleRunner;
-        ruleRunner = RuleRunner.builder().contentRules(List.of(MermaidUtils.createRule())).build();
+        ruleRunner = RuleRunner.builder()//.contentRules(List.of(MermaidUtils.createRule()))
+                .rules(List.of(new NoCollectionRule(), new NoPrimitiveOrBasicTypesRule(), new NoArrayRule()))
+                .build();
         return ruleRunner;
     }
 
-    public static String extractSequenceDiagram(String mermaidCode) {
+    public static String extractMermaidDiagram(String mermaidCode) {
 
         final var lines = mermaidCode.split("\n");
         final var extractedCode = new StringBuilder();
@@ -77,6 +82,10 @@ public class PackageMermaidClassDiagramGen {
         final var request = builder.addMessage(Message.builder().role(Role.USER).content(instruction).build()).build();
 
 
+        return runMermaidValidationFeedbackLoop(source, title, instruction, request);
+    }
+
+    private String runMermaidValidationFeedbackLoop(String source, String title, String instruction, ChatRequest request) {
         for (int i = 0; i < 5; i++) {
             final var chatResponse = client.chat(request);
             if (chatResponse.getException().isPresent()) {
@@ -90,9 +99,7 @@ public class PackageMermaidClassDiagramGen {
                 final var response = chatResponse.getResponse().get();
                 final var chatChoice = response.getChoices().get(0);
                 final var original = chatChoice.getMessage().getContent();
-                final var mermaidDiagram = extractSequenceDiagram(original);
-
-
+                final var mermaidDiagram = extractMermaidDiagram(original);
                 return validateMermaid(source, mermaidDiagram, title);
             }
         }
@@ -124,6 +131,8 @@ public class PackageMermaidClassDiagramGen {
                     .replace("{{JSON}}", RuleRunner.serializeRuleResults(checks))
                     .replace("{{MERMAID}}", mermaidDiagram)
                     .replace("{{TITLE}}", title);
+
+            System.out.println("FIX \n\n\n-----------" + fixInstruction + "\n------------\n------------");
 
             final var fixRequest = builder.addMessage(Message.builder().role(Role.USER)
                     .content(fixInstruction).build()).build();

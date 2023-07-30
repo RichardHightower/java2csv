@@ -2,6 +2,7 @@ package com.cloudurable.docgen.mermaid.validation;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.cloudurable.docgen.mermaid.validation.sequence.NoMethodCallsInDescriptionsRule;
 import org.junit.jupiter.api.Test;
 
 public class NoMethodCallsInDescriptionsRuleTest {

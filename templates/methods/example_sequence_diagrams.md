@@ -370,3 +370,44 @@ sequenceDiagram
     ImageProcessor->>FileUploader: Upload processed image
     FileUploader->>NotificationService: Send image processed notification
 ```
+
+# Error Handling Example:
+
+```mermaid 
+---
+title: Handle an error
+---
+sequenceDiagram
+    critical Establish a connection to the DB
+        Service-->DB: connect
+    option Network timeout
+        Service-->Service: Log error
+    option Credentials rejected
+        Service-->Service: Log different error
+    end
+```
+
+# Show alt and opt example 
+```mermaid
+---
+title: Book a cruise
+---
+
+sequenceDiagram
+    participant MemberDateService
+    participant RulesEngine
+
+    alt Check member has valid membership
+         MemberDateService->>RulesEngine: check member date and id
+         MemberDateService-->>MemberDateService: return we were unable to proceed
+    else Check to see if appointment fits in schedule
+        MemberDateService->>CruiseShip: parse the date string
+        alt See if vaction fits
+            MemberDateService-->>CruiseShip: comparing available dates
+            CruiseShip-->>MemberDateService: Return comparison result
+        else No Match
+            MemberDateService-->>RefundService: Issue refund
+        end
+    end
+
+```

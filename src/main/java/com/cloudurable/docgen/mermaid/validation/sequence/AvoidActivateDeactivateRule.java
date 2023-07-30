@@ -1,5 +1,8 @@
-package com.cloudurable.docgen.mermaid.validation;
+package com.cloudurable.docgen.mermaid.validation.sequence;
 
+
+import com.cloudurable.docgen.mermaid.validation.LineRule;
+import com.cloudurable.docgen.mermaid.validation.RuleResult;
 
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;

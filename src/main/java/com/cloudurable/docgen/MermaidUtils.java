@@ -69,13 +69,16 @@ public class MermaidUtils {
             int exitCode = process.waitFor();
 
             if (latch.await(30, TimeUnit.SECONDS)) {
-                executorService.shutdown();
-                return new Result(exitCode, outputRef.get().toString(), errorRef.get().toString(), null, true);
+
             } else {
-                executorService.shutdown();
-                return new Result(exitCode, outputRef.get().toString(), errorRef.get().toString(), null, false);
+                System.err.println("TIMEOUT");
             }
 
+            executorService.shutdown();
+            if (exitCode!=0) {
+                System.err.printf("CAN'T PROCESS DIAGRAM %s", FileUtils.readFile(input));
+            }
+            return new Result(exitCode, outputRef.get().toString(), errorRef.get().toString(), null, true);
         } catch (IOException | InterruptedException e) {
             return new Result(-1, outputRef.get().toString(), errorRef.get().toString(), e, false);
         }

@@ -2,6 +2,7 @@ package com.cloudurable.docgen.generators;
 
 import com.cloudurable.docgen.extract.FileUtils;
 import com.cloudurable.docgen.mermaid.validation.*;
+import com.cloudurable.docgen.mermaid.validation.sequence.*;
 import com.cloudurable.jai.OpenAIClient;
 import com.cloudurable.jai.model.text.completion.chat.ChatRequest;
 import com.cloudurable.jai.model.text.completion.chat.Message;
@@ -78,6 +79,7 @@ public class MethodMermaidSequenceGen {
 
     public String generateSequenceFromMethod(String javaMethodSource, String methodName, String className, String packageName) {
 
+        final var ruleRunner = buildRuleRunner();
         final var title = methodName + " (" + className + ")";
         final var builder = requesatBuilder(context);
         final var template = FileUtils.readFile(new File("templates/methods/generate_method_mermaid_sequence_by_method.md"));
@@ -86,6 +88,10 @@ public class MethodMermaidSequenceGen {
         final var request = builder.addMessage(Message.builder().role(Role.USER).content(instruction).build()).build();
 
 
+        return runValidationFeedbackLoop(javaMethodSource, title, instruction, request, ruleRunner);
+    }
+
+    private String runValidationFeedbackLoop(String javaMethodSource, String title, String instruction, ChatRequest request, RuleRunner ruleRunner) {
         for (int i = 0; i < 5; i++) {
             final var chatResponse = client.chat(request);
             if (chatResponse.getException().isPresent()) {
@@ -102,7 +108,7 @@ public class MethodMermaidSequenceGen {
                 final var mermaidDiagram = extractSequenceDiagram(original);
 
 
-                return validateMermaid(javaMethodSource, mermaidDiagram, title);
+                return validateMermaid(javaMethodSource, mermaidDiagram, title, ruleRunner);
             }
         }
         return "";
@@ -147,11 +153,11 @@ public class MethodMermaidSequenceGen {
 //        chatResponse.getException().ifPresent(err -> err.printStackTrace());
 //    }
 
-    private String validateMermaid(String javaMethodSource, String mermaidDiagram, String title) {
-        return validateMermaid(javaMethodSource, mermaidDiagram, title, 5);
+    private String validateMermaid(String javaMethodSource, String mermaidDiagram, String title, RuleRunner ruleRunner) {
+        return validateMermaid(javaMethodSource, mermaidDiagram, title, ruleRunner,5);
     }
 
-    private String validateMermaid(String javaMethodSource, String mermaidDiagram, String title, int count) {
+    private String validateMermaid(String javaMethodSource, String mermaidDiagram, String title, RuleRunner ruleRunner, int count) {
 
         if (count <= 0) {
             return mermaidDiagram;
@@ -159,7 +165,7 @@ public class MethodMermaidSequenceGen {
 
         ChatRequest.Builder builder = requesatBuilder(context);
 
-        final var ruleRunner = buildRuleRunner();
+
 
         final var templateMermaid = FileUtils.readFile(new File("templates/methods/generate_method_mermaid_sequence_by_method_mermaid.md"));
 
@@ -185,7 +191,7 @@ public class MethodMermaidSequenceGen {
                     System.out.printf("%s %s %d\n", fixInstruction, status, fixMermaidResponse.getStatusCode().orElse(666));
                 });
             }
-            return validateMermaid(javaMethodSource, mermaidDiagram, title, count - 1);
+            return validateMermaid(javaMethodSource, mermaidDiagram, title,  ruleRunner,count - 1);
 
         } else {
             return mermaidDiagram;

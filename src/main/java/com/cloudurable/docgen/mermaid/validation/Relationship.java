@@ -7,20 +7,28 @@ public class Relationship {
 
     public static final Relationship NOT_FOUND = new Relationship("", "",
             RelationshipType.NOT_FOUND, "", "", "");
-    public static final String INHERITANCE = "(\\<\\-\\-\\|)";
-    public static final String IMPLEMENTS_INTERFACE = "(\\<\\|\\.\\.)";
-    public static final String AGGREGATION = "(\\*\\-\\-)";
-    public static final String COMPOSITION = "(o\\-\\-)";
-    public static final String NAVIGABLE_ASSOCIATION = "(\\-\\-\\>)";
-    public static final String ASSOCIATION = "(\\-\\-)";
-    public static final String DEPENDENCY_FORWARD = "(\\.\\.\\>)";
-    public static final String DEPENDENCY_BIDIRECTIONAL = "(\\.\\.\\.\\.)";
-    public static final String DEPENDENCY_BACKWARD = "(>\\.\\.\\)";
-    public static final String CONNECTOR = "(\\.\\.)";
+    public static final String INHERITANCE_PATTERN_LEFT = "<\\|";
+    public static final String COMPOSITION_PATTERN = "\\*";
+    public static final String AGGREGATION_PATTERN = "o";
+    public static final String ASSOCIATION_PATTERN_LEFT = "<";
 
-    private static final String RELATIONSHIP_TYPE_PATTERN = "(" + INHERITANCE + "|" + IMPLEMENTS_INTERFACE + "|" + AGGREGATION + "|" + COMPOSITION + "|"
-            + NAVIGABLE_ASSOCIATION + "|" + ASSOCIATION + "|" + DEPENDENCY_FORWARD + "|"
-            + DEPENDENCY_BIDIRECTIONAL + "|" + DEPENDENCY_BACKWARD + "|" + CONNECTOR + "))";
+    public static final String ASSOCIATION_PATTERN_RIGHT = ">";
+    public static final String INHERITANCE_PATTERN_RIGHT = "\\|>";
+
+    // Link Patterns
+    public static final String LINK_SOLID_PATTERN = "--";
+    public static final String LINK_DASHED_PATTERN = "\\.\\.";
+
+    public static final String LEFT = "(" + INHERITANCE_PATTERN_LEFT + "|"
+            + COMPOSITION_PATTERN + "|" + AGGREGATION_PATTERN + "|" +
+            ASSOCIATION_PATTERN_LEFT + "){0,1}";
+
+    public static final String MIDDLE =
+            "(" + LINK_SOLID_PATTERN + "|" + LINK_DASHED_PATTERN + "){1}";
+    public static final String RIGHT = "(" + COMPOSITION_PATTERN + "|" + AGGREGATION_PATTERN + "|" +
+            ASSOCIATION_PATTERN_RIGHT + "|" + INHERITANCE_PATTERN_RIGHT + "){0,1}";
+
+    public static final String RELATIONSHIP_TYPE_PATTERN =  "(" + LEFT + MIDDLE + RIGHT + "){1}";
 
 
     private final String leftClass;
@@ -46,7 +54,9 @@ public class Relationship {
 
 
     public static String[] splitByRelationshipPattern(String line) {
+
         Matcher matcher = Pattern.compile(RELATIONSHIP_TYPE_PATTERN).matcher(line);
+
         if (!matcher.find()) {
             return null;
         }
@@ -75,8 +85,8 @@ public class Relationship {
         String leftClass;
         String leftCard = "";
 
-        if (left.contains(" ")) {
-            String[] split = left.split("\\s+");
+        if (left.contains("\"")) {
+            String[] split = left.split("\"");
             leftClass = split[0].trim();
             leftCard = split[1].trim();
         } else {
@@ -86,10 +96,12 @@ public class Relationship {
         String rightClass;
         String rightCard = "";
 
-        if (left.contains(" ")) {
-            String[] split = right.split("\\s+");
-            rightClass = split[1].trim();
-            rightCard = split[0].trim();
+        if (right.contains("\"")) {
+            String[] split = right.split("\"");
+
+            rightClass = split[2].trim();
+            rightCard = split[1].trim();
+
         } else {
             rightClass = right;
         }
@@ -114,19 +126,12 @@ public class Relationship {
             String classNameR = split[4];
             String description = split[5];
 
-            try {
-                cardinalityR = cardinalityR.substring(1, cardinalityR.length() - 1);
-                cardinalityL = cardinalityL.substring(1, cardinalityL.length() - 1);
-            } catch (IndexOutOfBoundsException iob) {
-                return NOT_FOUND;
-            }
             RelationshipType relationshipType = RelationshipType.parseType(relationshipS);
             return new Relationship(classNameL, cardinalityL, relationshipType, cardinalityR, classNameR, description);
         } else {
             return NOT_FOUND;
         }
     }
-
 
 
     // getters, setters, and toString..

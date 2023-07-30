@@ -2,6 +2,7 @@ package com.cloudurable.docgen;
 
 
 import com.cloudurable.docgen.extract.FileUtils;
+import com.cloudurable.docgen.generators.PackageMermaidClassDiagramGen;
 import com.cloudurable.jai.OpenAIClient;
 import com.cloudurable.jai.model.ClientResponse;
 import com.cloudurable.jai.model.FinishReason;
@@ -38,8 +39,8 @@ public class Main {
 //                    .genBusinessRules();
 
 
-           // DocGenerator.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
-            //        .genImageIfMissing();
+//            DocGenerator.builder().inputDirectoryPath(directoryPath).outputFile(outputFile).build()
+//                    .genImageIfMissing();
 
             final CountDownLatch countDownLatch = new CountDownLatch(3);
 
@@ -49,9 +50,9 @@ public class Main {
                             .useExistingMermaidIfFound(true)
                             .inlineMermaid(true).build()
 
-                            .genJustPackage();
+                            //.genJustPackage();
 
-                            //.genDesignDoc();
+                            .genDesignDoc();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

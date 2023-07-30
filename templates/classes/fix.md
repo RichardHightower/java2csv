@@ -16,7 +16,7 @@
 - Don't put Java annotations @Foo in a relationship   `Response --> @JSON Products : products`
 - Don't use angle brackets <> in a relationship   `Response --> Set<Product>: products` instead use `Response --> Set~Product~: products`
 - Never use primitives in a relationship. Don't use int, long, short, String, etc.
-
+- Don't include `Object` in a relationship
 
 # FIX Instruction
 Generate a mermaid class diagram based on the above guidelines titled {{TITLE}}.

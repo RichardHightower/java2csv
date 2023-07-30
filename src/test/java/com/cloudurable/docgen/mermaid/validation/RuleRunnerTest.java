@@ -1,5 +1,6 @@
 package com.cloudurable.docgen.mermaid.validation;
 
+import com.cloudurable.docgen.mermaid.validation.sequence.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;

@@ -4,6 +4,7 @@ import com.cloudurable.docgen.extract.FileUtils;
 import com.cloudurable.docgen.generators.MethodMermaidSequenceGen;
 import com.cloudurable.docgen.generators.PackageMermaidClassDiagramGen;
 import com.cloudurable.docgen.mermaid.validation.*;
+import com.cloudurable.docgen.mermaid.validation.sequence.*;
 import com.cloudurable.jai.OpenAIClient;
 import com.cloudurable.jai.model.ClientResponse;
 import com.cloudurable.jai.model.text.completion.chat.ChatRequest;
@@ -336,6 +337,8 @@ public class DocGenerator {
 
                 List<String> classDefs = entry.getValue();
                 final var javaCode = String.join("\n\n", classDefs.toArray(new String[0]));
+
+                System.out.println(javaCode);
 
                 System.out.println(gen.generateSequenceFromPackages(packageName, javaCode));
 

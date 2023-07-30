@@ -3,6 +3,7 @@ package com.cloudurable.docgen.mermaid.validation;
 import static org.junit.jupiter.api.Assertions.*;
 
 
+import com.cloudurable.docgen.mermaid.validation.sequence.DataClassesAndPrimitiveRule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

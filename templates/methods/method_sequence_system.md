@@ -17,6 +17,10 @@ Ensure data classes are not participants. Examples include File, ChatRequest, Em
 
 Example participants that are desirable include action-oriented classes like NewsService, ArticleSorter, etc.
 
+No angle brackets in participant: FAIL=`participant Optional<OfferEntity>`, PASS=`participant Optional~OfferEntity~`
+No angle brackets in message interaction: FAIL=`offerRepository-->>Optional<OfferEntity>: return Optional<OfferEntity>`, PASS=`offerRepository-->>Optional~OfferEntity~: might return an offer`
+
+
 Please provide examples of 25 participant class names that we do want under the header desirable participants.
 
 Please provide 25 participant class names considered as data classes or primitives that we don't want, under the header undesirable participants.
@@ -25,3 +29,5 @@ Develop five illustrative Mermaid sequence diagrams of varied complexity and the
 
 Then come up with five different Java methods of varying complexity and generate five corresponding Mermaid sequence diagrams from them using the same guidelines.
 
+Then show a basic error handling example in mermaid.
+Then show a basic alt/opt example in mermaid. 
