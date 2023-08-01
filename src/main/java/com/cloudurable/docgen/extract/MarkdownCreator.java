@@ -19,7 +19,7 @@ public class MarkdownCreator {
         default void visitDir(File dir) {}
     }
 
-    private static final Set<String> allowedExtensions= new HashSet<>(List.of("java"));//, "xml", "md", "yaml", "yml",
+    private static final Set<String> allowedExtensions= new HashSet<>(List.of("java", "md", "txt", "js", "json"));//, "xml", "md", "yaml", "yml",
             //"txt", "sh", "js", "json", "Jenkinsfile", "Dockerfile"));
 
     private static final Map<String, String> extToLang= Map.of("java", "java",
