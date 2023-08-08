@@ -18,7 +18,12 @@ public class MermaidUtils {
 
 
     public static Result runMmdc(File input, File output) {
-        String command = "/opt/homebrew/bin/mmdc -i " + input.toString() + " -o " + output + " -s 2 -b white";
+        //String command = "/opt/homebrew/bin/mmdc -i " + input.toString() + " -o " + output + " -s 2 -b white";
+        //String command = "/Users/richardhightower/.nvm/versions/node/v6.17.1/bin/mmdc -i " + input.toString() + " -o " + output + " -s 2 -b white";
+//docker run --rm -u `id -u`:`id -g` -v /path/to/diagrams:/data minlag/mermaid-cli
+        String command = "docker run --rm -u 501:20 -v " + input.getParentFile().getParentFile() + ":/data minlag/mermaid-cli -i "
+                + "./mermaid/" + input.getName() + " -o ./images/" + output.getName() + " -s 2 -b white";
+        System.out.println(command);
         ExecutorService executorService = Executors.newCachedThreadPool();
 
         final AtomicReference<StringBuilder> outputRef = new AtomicReference<>(new StringBuilder());

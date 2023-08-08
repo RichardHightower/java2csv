@@ -21,6 +21,13 @@
 # FIX Instruction
 Generate a mermaid class diagram based on the above guidelines titled {{TITLE}}.
 
+
+
+# Mermaid code 
+```
+{{MERMAID}}
+```
+
 # Java code
 
 ```java
@@ -30,7 +37,7 @@ Generate a mermaid class diagram based on the above guidelines titled {{TITLE}}.
 ```
 
 # Instruction
-Regenerate a mermaid class diagram based on the above guidelines and the validation results titled {{TITLE}}
+Regenerate a mermaid class diagram based on the above guidelines and the validation results.
 
 
 # Validation JSON

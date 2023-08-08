@@ -15,7 +15,7 @@
 - **Association**: Use `Class1 --> Class2: fieldName`.
 - Don't use <> in a relationship  
   - WRONG:`Response --> Set<Product>: products` 
-  - CORRECT: `Response --> Set~Product~: products`
+  - CORRECT: `Response "one"--"many"> products : Set of Products`
 - Don't put Java annotations @Foo in a relationship   `Response --> @JSON Products : products`
 - Don't use angle brackets <> in a relationship   `Response --> Set<Product>: products` instead use `Response --> Set~Product~: products`
 - Never use primitives in a relationship. Don't use int, long, short, String, etc.
@@ -23,7 +23,13 @@
 
 
 # Instruction
-Generate a mermaid class diagram based on the above guidelines titled {{TITLE}}.
+Generate a mermaid class diagram based on the above guidelines titled {{TITLE}} using the code below with these steps.
+
+1. List the classes in the diagram 
+2. List the relationships in the diagram
+3. Ensure that there are no angle brackets <> in the relationships use the form `Response "one"--"many"> products : Set of Products` instead.
+4. Ensure that there are no primitives in the relationships. Don't use int, long, short, String, etc.
+5. After you finish with the list, then generate the diagram based on the code below. 
 
 # Java code
 

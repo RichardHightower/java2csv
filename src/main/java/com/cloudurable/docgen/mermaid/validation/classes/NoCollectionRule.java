@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 
 public class NoCollectionRule implements LineRule {
 
-    private final Pattern PATTERN = Pattern.compile("(List|Set|ArrayList|Collection|HashSet|Queue)<([A-Za-z0-9]+)>");
+    private final Pattern PATTERN = Pattern.compile("\\b(List|Set|ArrayList|Collection|HashSet|Queue)\\b<([A-Za-z0-9,]+)>");
 
 
     @Override

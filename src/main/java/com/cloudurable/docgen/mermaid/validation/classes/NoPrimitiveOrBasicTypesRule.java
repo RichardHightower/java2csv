@@ -9,8 +9,8 @@ import java.util.regex.Pattern;
 
 public class NoPrimitiveOrBasicTypesRule implements LineRule {
 
-    private final Pattern PATTERN = Pattern.compile("(int|float|double|short|long|byte|boolean|String|" +
-            "Integer|Float|Double|Short|Long|Byte|Boolean|StringBuffer|File|Object)");
+    private final Pattern PATTERN = Pattern.compile("\\b(int|float|double|short|long|byte|boolean|String|" +
+            "Integer|Float|Double|Short|Long|Byte|Boolean|StringBuffer|File|Object)\\b");
 
 
     @Override

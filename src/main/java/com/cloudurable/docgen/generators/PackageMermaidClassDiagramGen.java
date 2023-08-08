@@ -1,6 +1,5 @@
 package com.cloudurable.docgen.generators;
 
-import com.cloudurable.docgen.MermaidUtils;
 import com.cloudurable.docgen.extract.FileUtils;
 import com.cloudurable.docgen.mermaid.validation.*;
 import com.cloudurable.docgen.mermaid.validation.classes.NoArrayRule;
@@ -39,7 +38,7 @@ public class PackageMermaidClassDiagramGen {
 
     private static ChatRequest.Builder requesatBuilder(List<Message> context) {
         return ChatRequest.builder().messages(new ArrayList<>(context))
-                .maxTokens(2000).temperature(0.15f).model("gpt-3.5-turbo-16k");
+                .maxTokens(2000).temperature(0.15f).model("gpt-3.5-turbo-16k-0613");
     }
 
     private static RuleRunner buildRuleRunner() {
@@ -72,7 +71,7 @@ public class PackageMermaidClassDiagramGen {
         return extractedCode.toString();
     }
 
-    public String generateSequenceFromPackages(String packageName, String source) {
+    public String generateClassDiagramFromPackage(String packageName, String source) {
 
         final var title = "Package " + packageName;
         final var builder = requesatBuilder(context);
@@ -100,6 +99,7 @@ public class PackageMermaidClassDiagramGen {
                 final var chatChoice = response.getChoices().get(0);
                 final var original = chatChoice.getMessage().getContent();
                 final var mermaidDiagram = extractMermaidDiagram(original);
+                System.out.println(mermaidDiagram);
                 return validateMermaid(source, mermaidDiagram, title);
             }
         }

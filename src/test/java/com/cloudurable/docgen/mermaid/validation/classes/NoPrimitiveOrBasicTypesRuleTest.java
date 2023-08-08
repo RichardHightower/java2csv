@@ -42,4 +42,17 @@ public class NoPrimitiveOrBasicTypesRuleTest {
         assertEquals("Not basic or primitive types", result2.getDescription());
         assertEquals("Not basic or primitive types", result3.getDescription());
     }
+
+    @Test
+    public void testObjectVsObjectMapper() {
+        String line1 = "Object -- Class1";
+        String line2 = "ObjectMapper -- Foo";
+
+        RuleResult result1 = noPrimitiveOrBasicTypesRule.check(line1, 1);
+        RuleResult result2 = noPrimitiveOrBasicTypesRule.check(line2, 2);
+
+        assertEquals("NoPrimitivesLeft Object", result1.getRuleName());
+        assertEquals("pass", result2.getRuleName());
+
+    }
 }

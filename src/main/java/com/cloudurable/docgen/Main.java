@@ -49,11 +49,8 @@ public class Main {
                     DocGenerator.builder().inputDirectoryPath(directoryPath).outputFile(outputFile)
                             .useExistingMermaidIfFound(true)
                             .inlineMermaid(true).build()
-
-                            //.genJustPackage();
-
                             .genDesignDoc();
-                } catch (IOException e) {
+                } catch (Exception e) {
                     e.printStackTrace();
                 }
                 countDownLatch.countDown();

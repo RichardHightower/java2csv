@@ -20,10 +20,17 @@
 * Avoid System.out or primitives byte[], float, int as participants.
 * No angle brackets in participant: FAIL=`participant Optional<OfferEntity>`, PASS=`participant Optional~OfferEntity~`
 * No angle brackets in message interaction: FAIL=`offerRepository-->>Optional<OfferEntity>: return Optional<OfferEntity>`, PASS=`offerRepository-->>Optional~OfferEntity~: might return an offer`
-
+* No angle brackets in message interaction: FAIL=`offerRepository-->>Optional<OfferEntity>: return Optional<OfferEntity>`, PASS=`offerRepository-->>Optional~OfferEntity~: might return an offer`
+* No dots in participant FAIL=`participant FacilityConfigProto.FacilityConfig`, PASS=`FacilityConfig`
 
 # Instruction 
-Generate a mermaid sequence diagram based on the above guidelines titled {{TITLE}}.
+Generate a mermaid sequence diagram based on the above guidelines titled {{TITLE}} using the Java code below by following the instructions below.
+1. Create a list of participants
+2. Take out of that list any exceptions or throwables, and any primitives or value classes.
+3. Ensure there are no angle brackets in the list of participants.
+4. Show the list of participants.
+5. Now show the relationships between the participants.
+6. Finally, create the mermaid code for the sequence diagram.
 
 # Java method 
 

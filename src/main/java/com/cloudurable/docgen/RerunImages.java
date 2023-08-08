@@ -8,8 +8,7 @@ import java.util.stream.Collectors;
 public class RerunImages {
 
     public static void main(String... args) {
-        final File directoryPath = new File(args.length > 0 ? args[0] : ".");
-        final File outputDir = new File(args.length > 1 ? args[1] : "./out");
+        final File outputDir = new File(args.length == 1 ? args[0] : ".");
 
         if (!outputDir.exists()) {
             return;
@@ -21,16 +20,16 @@ public class RerunImages {
         Set<String> imageFiles = Arrays.stream(imagesOutputDir.listFiles()).map(f -> f.getName()).map(name -> removeExt(name)).collect(Collectors.toSet());
 
         if (imageFiles.size() != mermaidFiles.size()) {
-            System.out.println("Sizes not equal");
+            System.out.println("Sizes not equal " + (mermaidFiles.size() - imageFiles.size()));
             mermaidFiles.removeAll(imageFiles);
-            System.out.println("Missing images");
+            System.out.println("Missing images ");
             mermaidFiles.forEach(f ->
                     System.out.println(new File(imagesOutputDir, f + ".png"))
             );
 
-//            mermaidFiles.forEach(f ->
-//                    reRun(new File(mermaidOutputDir, f + ".mmd"), new File(imagesOutputDir, f + ".png"))
-//            );
+            mermaidFiles.forEach(f ->
+                    reRun(new File(mermaidOutputDir, f + ".mmd"), new File(imagesOutputDir, f + ".png"))
+            );
         }
 
 

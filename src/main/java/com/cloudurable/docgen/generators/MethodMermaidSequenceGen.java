@@ -39,7 +39,7 @@ public class MethodMermaidSequenceGen {
 
     private static ChatRequest.Builder requesatBuilder(List<Message> context) {
         return ChatRequest.builder().messages(new ArrayList<>(context))
-                .maxTokens(2000).temperature(0.15f).model("gpt-3.5-turbo-16k");
+                .maxTokens(2000).temperature(0.15f).model("gpt-3.5-turbo-16k-0613");
     }
 
     private static RuleRunner buildRuleRunner() {

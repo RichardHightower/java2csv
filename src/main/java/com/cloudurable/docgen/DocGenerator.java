@@ -143,173 +143,48 @@ public class DocGenerator {
     private  void getGenerateUMLClassDiagramForPackage(File mermaid, File images,
                                                              String packageName, List<String> classDefs, StringBuilder markdownBuilder) throws Exception {
 
-        final String mermaidInstructions = "Only put mermaid output in the output. Do not put any explanation. Just the mermaid output. The output is only mermaid markup. Do not add any non mermaid output. Do not add extends to the class defintion, but only the association. " +
-                "\nYou are a software engineer writing up documentation for a project. " +
-                "For a given package a class definitions create a class diagram in mermaid using the following example given below. " +
-                "All output should be in mermaid format. Here is an example input\n" +
-                "SAMPLE INPUT:\n " +
-                "for package com.cloud.text.completion.chat create a class diagram in mermaid, add the package name as the title\n" +
-                "public class Message \n" +
-                "\tprivate final Role role;\n" +
-                "\tprivate final String content;\n" +
-                "\tprivate final String name;\n" +
-                "\tprivate final FunctionalCall functionCall;\n" +
-                "public class ChatRequest extends CommonCompletionRequest \n" +
-                "\tprivate final List<Message> messages;\n" +
-                "\tprivate final List<FunctionDef> functions;\n" +
-                "\tprivate final FunctionalCall functionalCall;\n" +
-                "\n" +
-                "SAMPLE OUTPUT:\n" +
-                "---\n" +
-                "title: Package Chat (com.cloud.text.completion.chat)\n" +
-                "---\n" +
-                "classDiagram\n" +
-                "    class Message{\n" +
-                "        -Role role\n" +
-                "        -String content\n" +
-                "        -String name\n" +
-                "        -FunctionalCall functionCall\n" +
-                "    }\n" +
-                "\n" +
-                "    class ChatRequest{\n" +
-                "        -List<Message> messages\n" +
-                "        -List<FunctionDef> functions\n" +
-                "        -FunctionalCall functionalCall\n" +
-                "    }\n" +
-                "\n" +
-                "    CommonCompletionRequest <|-- ChatRequest: extends\n" +
-                "    ChatRequest \"1\" o-- \"*\" Message: has-many\n" +
-                "    ChatRequest \"1\" o-- \"*\" FunctionDef: has-many\n" +
-                "    ChatRequest \"1\" o-- \"1\" FunctionalCall: has-a\n" +
-                "To create UML class diagrams using Mermaid syntax, follow these concise guidelines:\n" +
-                "Start by defining the class diagram using the classDiagram keyword.\n" +
-                "Define a class using the class keyword followed by the class name.\n" +
-                "Specify attributes and methods inside the class using - for attributes and + for methods.\n" +
-                "Use the appropriate data types for attributes and specify the return type for methods.\n" +
-                "Separate attributes and methods with line breaks.\n" +
-                "Add optional annotation text to describe the class.\n" +
-                "Use different symbols to represent relationships:\n" +
-                "Inheritance: Use --|> between the derived class and the base class.\n" +
-                "Composition: Use *-- between the container class and the contained class.\n" +
-                "Aggregation: Use o-- between the container class and the contained class.\n" +
-                "Dependency: Use ..> between the dependent class and the dependency.\n" +
-                "Association: Use -- between two classes.\n" +
-                "Use the appropriate syntax for each relationship.<<Interface>> To represent an Interface class\n" +
-                "Use <<Abstract>> To represent an abstract class\n" +
-                "Use <<Service>> To represent a service class\n" +
-                "Use <<Enumeration>> To represent an enum\n" +
-                "Use <<interface>>  to represent an interface" +
-                "Here's an example of concise Mermaid code for a class diagram with different relationships:" +
-                "\n```mermaid" +
-                "classDiagram\n" +
-                "class Animal {\n" +
-                "  name String\n" +
-                "  +eat() void\n" +
-                "}\n" +
-                "\n" +
-                "class Shape {\n" +
-                "    <<interface>>\n" +
-                "}\n" +
-                "\n" +
-                "class Mammal{\n" +
-                "  - furColor: String\n" +
-                "}\n" +
-                "\n" +
-                "class Zoo {\n" +
-                "  name String\n" +
-                "}\n" +
-                "\n" +
-                "class Car {\n" +
-                "    make String\n" +
-                "    model String\n" +
-                "}\n" +
-                "\n" +
-                "class Student {\n" +
-                "    -idCard : IdCard\n" +
-                "}\n" +
-                "\n" +
-                "class IdCard{\n" +
-                "    -id : int\n" +
-                "    -name : string\n" +
-                "}\n" +
-                "\n" +
-                "class Bike{\n" +
-                "    -id : int\n" +
-                "    -name : string\n" +
-                "}\n" +
-                "\n" +
-                "Square --|> Shape : implements\n" +
-                "Student \"1\" --o \"1\" IdCard : carries\n" +
-                "Student \"1\" --o \"1\" Bike : rides\n" +
-                "Mammal --|> Animal\n" +
-                "Zoo \"1\" --* \"*\" Animal\n" +
-                "Zoo \"1\" -- \"1\" ZooKeeper\n" +
-                "Car \"1\" --* \"1\" Engine\n" +
-                "Car ..> Driver" +
-                "```\n" +
-                "In this example:\n" +
-                "* Mammal inherits from Animal using --|>.\n" +
-                "* Zoo has a composition relationship with Animal using *--.\n" +
-                "* Zoo has an association relationship with ZooKeeper using --.\n" +
-                "* Car has an aggregation relationship with Engine using *--.\n" +
-                "* Car has a dependency relationship with Driver using ..>.\n" +
-                "* Student has a composition relationship with IdCard using --o.\n" +
-                "* Student has a composition relationship with Bike using --o.\n"
-                ;
-
 
         final String imageForPackage = packageName.replace(".", "_") + ".png";
-
-
-
         File mermaidFile = new File(mermaid, packageName.replace(".", "_") + ".mmd");
         File pngFile = new File(images, imageForPackage);
 
+        String mContent =  "";
 
-        if (useExistingMermaidIfFound) {
-            if (pngFile.lastModified() < mermaidFile.lastModified()) {
-                String mContent =  FileUtils.readFile(mermaidFile);
-                if (!this.inlineMermaid) {
-                    markdownBuilder.append("\n![class diagram](./images/" + imageForPackage + ")\n\n");
-                } else {
-                    markdownBuilder.append("\n```mermaid\n").append(mContent).append("\n```\n");
-                }
+
+
+        if (useExistingMermaidIfFound && mermaidFile.exists()) {
+            mContent = FileUtils.readFile(mermaidFile);
+            if(mContent!= null && mContent.startsWith("SKIP"))  {
                 return;
             }
+            if (pngFile.lastModified() < mermaidFile.lastModified()) {
+
+                final var result = MermaidUtils.runMmdc(mermaidFile, pngFile);
+                if (!this.inlineMermaid && pngFile.exists() && result.getResult() == 0){
+                    markdownBuilder.append("\n![class diagram](./images/" + imageForPackage + ")\n\n");
+                } else if (result.getResult() == 0) {
+                    markdownBuilder.append("\n```mermaid\n").append(mContent).append("\n```\n");
+                }
+                if (result.getResult() == 0) {
+                    return;
+                }
+            }
         }
 
-        String error = "";
-        String mermaidContent = "";
-        String classDefsStr = String.join("\n\n", classDefs.toArray(new String[0]));
-        for (int i =0; i < 3; i++) {
-            String message = String.format("Create a class mermaid UML class diagram for package %s. Here are the classes for this UML diagram:\n%s\n%s",
-                    packageName,
-                    classDefsStr,
-                    error);
+        final var javaCode = String.join("\n\n", classDefs.toArray(new String[0]));
 
+        final var gen = new PackageMermaidClassDiagramGen();
+        mContent = gen.generateClassDiagramFromPackage(packageName, javaCode);
+        FileUtils.writeFile(mermaidFile, mContent);
+        final var result = MermaidUtils.runMmdc(mermaidFile, pngFile);
 
-            try {
-                mermaidContent = chat(message, mermaidInstructions);
-                mermaidContent = mermaidContent.replace("interface ", "class ");
-                mermaidContent = mermaidContent.replace("abstract class ", "class ");
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                continue;
-            }
-            Files.write(mermaidFile.toPath(), mermaidContent.getBytes(StandardCharsets.UTF_8));
-            System.out.println(mermaidContent);
-            Result result = MermaidUtils.runMmdc(mermaidFile, pngFile);
-            if (result.getResult() == 0) {
-                break;
+        if (result.getResult() == 0) {
+
+            if (!this.inlineMermaid && pngFile.exists()){
+                markdownBuilder.append("\n![class diagram](./images/" + imageForPackage + ")\n\n");
             } else {
-                System.err.println("ERROR $$$$$$$$$$$$ \n\n" + mermaidContent);
-                error = "\n Error generating UML class diagram with the mermaid you generated, can you try again? errors\n "
-                        + result.getErrors() + "\noutput\n " + result.getOutput();
+                markdownBuilder.append("\n```mermaid\n").append(mContent).append("\n```\n");
             }
-        }
-
-        if (pngFile.exists()) {
-            markdownBuilder.append("![class diagram](./images/" + imageForPackage + ")\n");
         }
 
     }
@@ -340,7 +215,7 @@ public class DocGenerator {
 
                 System.out.println(javaCode);
 
-                System.out.println(gen.generateSequenceFromPackages(packageName, javaCode));
+                System.out.println(gen.generateClassDiagramFromPackage(packageName, javaCode));
 
             });
 
@@ -405,9 +280,10 @@ public class DocGenerator {
                                 }
                         );
 
-
                 try {
                     Files.write(markdownFileForPackage.toPath(), markdownBuilder.toString().getBytes(StandardCharsets.UTF_8));
+
+                    generateAll(outputDir);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -492,10 +368,34 @@ public class DocGenerator {
         final var mermaidSequenceGen = new  MethodMermaidSequenceGen();
         File mermaidMethodFile = new File(mermaid, mermaidSeqForMethod);
         File pngMethodFile = new File(images, imageForMethod);
+        String mContent = "";
 
         if (useExistingMermaidIfFound) {
             if (mermaidMethodFile.exists()) {
-                String mContent =  FileUtils.readFile(mermaidMethodFile);
+                mContent =  FileUtils.readFile(mermaidMethodFile);
+                if(mContent!= null && mContent.startsWith("SKIP"))  {
+                    return "\n";
+                }
+                if (mermaidMethodFile.lastModified() > pngMethodFile.lastModified()) {
+                    final var results = MermaidUtils.runMmdc(mermaidMethodFile, pngMethodFile);
+                    if (results.getResult() == 0 && pngMethodFile.exists()) {
+                        if (!this.inlineMermaid) {
+                            markdownBuilder.append("\n![sequence diagram](./images/" + imageForMethod + ")\n\n");
+                        } else {
+                            markdownBuilder.append("\n```mermaid\n").append(mContent).append("\n```\n");
+                        }
+                        return markdownBuilder.toString();
+                    }
+                }
+            }
+        }
+
+        mContent = mermaidSequenceGen.generateSequenceFromMethod(javaMethod.getBody(), javaMethod.getSimpleName(),
+                javaClass.getSimpleName(), packageName);
+        if (!isBlank(mContent)) {
+            FileUtils.writeFile(mermaidMethodFile, mContent);
+            final var results = MermaidUtils.runMmdc(mermaidMethodFile, pngMethodFile);
+            if (results.getResult() == 0 && pngMethodFile.exists()) {
                 if (!this.inlineMermaid) {
                     markdownBuilder.append("\n![sequence diagram](./images/" + imageForMethod + ")\n\n");
                 } else {
@@ -504,87 +404,10 @@ public class DocGenerator {
                 return markdownBuilder.toString();
             }
         }
-
-        String result = mermaidSequenceGen.generateSequenceFromMethod(javaMethod.getBody(), javaMethod.getSimpleName(),
-                javaClass.getSimpleName(), packageName);
-        if (!isBlank(result)) {
-            FileUtils.writeFile(mermaidMethodFile, result);
-            MermaidUtils.runMmdc(mermaidMethodFile, pngMethodFile); //Need redo block here.
-        }
-        return result;
-//
-//        String baseMermaidInstruction = "As a software engineer. You will create a sequence mermaid diagram for a given method. \n" +
-//                "Here's a concise guide for creating Mermaid sequence diagrams:\n" +
-//                "Start by defining the sequence diagram using the sequenceDiagram keyword. Don't use fully qualified class names instead, put the package name in a title. \n" +
-//                "Define participants using the participant keyword followed by the participant name.\n" +
-//                "Use arrows to represent messages between participants.\n" +
-//                "Remember to escape classes that have generics like List<Foo> in java and use List~Foo~ in mermaid.\n" +
-//                "Use -> for synchronous messages.\n" +
-//                "Use --> for asynchronous messages.\n" +
-//                "Use ->> for response messages.\n" +
-//                "Use -->> for asynchronous response messages.\n" +
-//                "Use the appropriate syntax for each message.\n" +
-//                "Use the Note keyword to add notes to the diagram.\n" +
-//                "Ensure each message has a short concise description.  Messages should all be on one like with no newlines characters. in the description \n" +
-//                "Use Note right of to add a note to the right of a participant.\n" +
-//                "Use Note left of to add a note to the left of a participant.\n" +
-//                "Use Note over to add a note over two or more participants.\n" +
-//                "Use the loop keyword to create loops in the diagram.\n" +
-//                "Use the alt and opt keywords to create alternative paths in the diagram.\n" +
-//                "Use the title keyword to add a title to the diagram.\n" +
-//                "Do not use fully qualified classnames (class name only no packages) for the participants.\n" +
-//                "Here's an example of Mermaid code for a sequence diagram:\n" +
-//                "sequenceDiagram\n" +
-//                "    participant A\n" +
-//                "    participant B\n" +
-//                "    Note right of A: A note\n" +
-//                "    A->>B: Synchronous message\n" +
-//                "    B-->A: Asynchronous message\n" +
-//                "    B->>A: Response message\n" +
-//                "    A-->>B: Asynchronous response message\n" +
-//                "    Note left of B: Another note\n" +
-//                "    loop Loop example\n" +
-//                "        alt Alternative example\n" +
-//                "            A->>B: Option 1\n" +
-//                "        else Option 2\n" +
-//                "            break when the booking process fails\n" +
-//                "                API-->Consumer: show failure\n" +
-//                "            end\n" +
-//                "        end\n" +
-//                "        A->>B: Loop message\n" +
-//                "    end\n" +
-//                "    title Sequence diagram example\n" +
-//                "    B->A: A very long message that needs to be broken\n" +
-//                "This event-->>Publisher: Set<Triple<String, String, String>> SHOULD BE This event-->>Publisher: Set~Triple~String, String, String~~." +
-//                "" +
-//                "\nAs an software engineer create a UML sequence diagram for ";
-//
-//        String methodInstruction = String.format("%s this method %s for class %s \nBODY:\n %s \n",
-//                baseMermaidInstruction, javaMethod.getSimpleName(), javaClass.getName(), javaMethod.getBody());
-        //generateSequence(imageForMethod, markdownBuilder, mermaidMethodFile, pngMethodFile, methodInstruction);
-//
-////        if (isBlank(result)) {
-////            methodInstruction = String.format("%s this method %s for class %s \nBODY:\n %s \n",
-////                    baseMermaidInstruction, javaMethod.getSimpleName(), javaClass.getName(), stepByStep);
-////            result = generateSequence(imageForMethod, markdownBuilder, mermaidMethodFile, pngMethodFile, methodInstruction);
-////        }
-//
-//        return result;
+        return markdownBuilder.toString();
     }
 
 
-    private static RuleRunner buildRunner() {
-        RuleRunner ruleRunner;
-        List<LineRule> rules = new ArrayList<>();
-        rules.add(new AvoidNotesRule());
-        rules.add(new NoMethodCallsInDescriptionsRule());
-        rules.add(new AvoidActivateDeactivateRule());
-        rules.add(new ParticipantAliasRule());
-        rules.add(new SystemOutRule());
-        rules.add(new DataClassesAndPrimitiveRule());
-        ruleRunner = RuleRunner.builder().rules(rules).build();
-        return ruleRunner;
-    }
 
     private static String briefDescriptionOfMethod(JavaItem javaClass, JavaItem javaMethod) {
         StringBuilder markdownBuilder = new StringBuilder();
@@ -934,13 +757,22 @@ public class DocGenerator {
         File mermaidDir = new File(outputDir, "mermaid");
         File imagesDir = new File(outputDir, "images");
 
-        var files = mermaidDir.listFiles((dir, name) -> name.endsWith(".mmd"));
 
-        if (files != null) {
-            List<File> imageFiles = Arrays.stream(files)
+
+        var mermaidFiles = mermaidDir.listFiles((dir, name) -> name.endsWith(".mmd"));
+        var imageFiles = mermaidDir.listFiles((dir, name) -> name.endsWith(".png"));
+        if (mermaidFiles != null && imageFiles != null) {
+            System.out.println("mermaidFiles" + mermaidFiles.length + "imageFiles " + imageFiles.length);
+
+        }
+
+
+
+        if (mermaidFiles != null) {
+            List<File> imageFileList = Arrays.stream(mermaidFiles)
                     .map(file -> new File(imagesDir, file.getName().replace(".mmd", ".png")))
                     .collect(Collectors.toList());
-            imageFiles.forEach(imageFile -> {
+            imageFileList.forEach(imageFile -> {
 
 
                 File mermaidFile = new File(mermaidDir, imageFile.getName().replace(".png", ".mmd"));
